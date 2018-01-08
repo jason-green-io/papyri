@@ -1,6 +1,6 @@
+#!env python3
 import sys
 import minecraftmap
-import yaml
 import os
 import glob
 import PIL
