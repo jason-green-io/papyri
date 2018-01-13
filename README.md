@@ -1,11 +1,16 @@
 # papyri version 0.1
 
+Papyri is a Minecraft map item web presenter. It will show all maps created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since Many maps can be created of the same area, Papyri will prioritize redering in this order, *1.* being the top layer:
 
-Font provided by: http://www.04.jp.org
+1. maps at zoom level 0, rendered oldest to newest
+2. maps	at zoom level 1, rendered oldest to newest
+3. maps	at zoom level 2, rendered oldest to newest
+4. maps	at zoom level 3, rendered oldest to newest
+5. maps	at zoom level 5, rendered oldest to newest
 
-DZI viewer provided by: https://github.com/davidmcclure/osd-dzi-viewer and https://openseadragon.github.io
+So maps with higher detail are redered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
 
-## pre-requisites
+## prerequisites
 
 Python 3 (Not tested in Python 2)
 
@@ -23,11 +28,24 @@ some python stuff you'll need:
 
     pip3 install requests pyvips
 
-and you'll need minecraftmap; for now use this fork: https://github.com/jason-green-io/minecraftmap
+and you'll need minecraftmap; I've put in a pull request for the official one to fix maps in 1.12, I'm hoping to just pull this from pypi eventaully for now use this fork:
 
-follow the instructions to build and install, I've put in a pull request for the official one to fix 1.12
+    git clone https://github.com/jason-green-io/minecraftmap
+
+then, inside the new `minecraftmap` folder
+
+    python setup.py build
+    python setup.py install
+
+
 
 ## usage
 
 For now, type `./papyri.py -h`
+
+## Credits
+
+Font provided by: http://www.04.jp.org
+
+DZI viewer provided by: https://github.com/davidmcclure/osd-dzi-viewer and https://openseadragon.github.io
 
