@@ -43,9 +43,9 @@ then, inside the new `minecraftmap` folder
 
 ## usage
 
-For now, type `./papyri.py -h`
+type `./papyri.py -h`
 
-The output folder can now be served as a website. It's completely static so it can but put in an S3 bucket or a github project.
+Once it's done, the contents of the output folder can be served as a website. It's completely static so it can but put in an S3 bucket a github project or hosted locally on you machine with something like `python3 -m SimpleHTTPServer`.
 
 
 ## Credits
