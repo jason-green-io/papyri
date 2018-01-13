@@ -40,8 +40,17 @@ papyriOutputPath = args.output
 # This is the font used for the POI index number
 fontpath = os.path.join("04B_03B_.TTF")
 
+# scale factor
+scaleFactor = 1
+
+# viewer zoom level
+viewerZoom = args.size * 0.0092
+
+# this is how much of the map is rendered
+canvasSize = args.size * scaleFactor
+
 # Format for the structure of a link pointing to a specific location on the map 
-linkFormat = "map/#dim/overworld/{}/{}/184.0000"
+linkFormat = "map/#dim/overworld/{}/{}/" + str(viewerZoom)
 
 # regular expression searching for coordinates
 poiRE = "(.*)\n(-?\d+), ?(-?\d+)\n(.*)"
@@ -96,11 +105,6 @@ logging.info("Found %s player(s)", len(playerDatFiles))
 # empty defaultdict for all the tags
 taggedPois = collections.defaultdict(list)
 
-# scale factor
-scaleFactor = 1
-
-# this is how much of the map is rendered
-canvasSize = args.size * scaleFactor
 
 def unpack_nbt(tag):
     """                                                                                                                                                                                                            
@@ -159,7 +163,7 @@ for datFile in playerDatFiles:
                     colors = re.findall(colorRE, desc)
 
                     # replace the tags with markdown links to the tag categories
-                    desc = re.subn("\[(.*?)\]", r"[\1](/#!papyri.md#\1)", desc)[0]
+                    desc = re.subn("\[(.*?)\]", r"[\1](#\1)", desc)[0]
                     
                     # print(repr(desc))
 
