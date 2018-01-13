@@ -26,7 +26,7 @@ to do this on Mac OS X:
 
 Ubuntu should be:
 
-    apt-get install libvips
+    apt-get install libvips glib2.0-dev
 
 some python stuff you'll need:
 
