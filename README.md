@@ -6,9 +6,9 @@ Papyri is a Minecraft map item web presenter. It will show all maps created on a
 2. maps	at zoom level 1, rendered oldest to newest
 3. maps	at zoom level 2, rendered oldest to newest
 4. maps	at zoom level 3, rendered oldest to newest
-5. maps	at zoom level 5, rendered oldest to newest
+5. maps	at zoom level 4, rendered oldest to newest
 
-So maps with higher detail are redered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
+So maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
 
 ## prerequisites
 
@@ -49,3 +49,4 @@ Font provided by: http://www.04.jp.org
 
 DZI viewer provided by: https://github.com/davidmcclure/osd-dzi-viewer and https://openseadragon.github.io
 
+minecraftmap map item framework by: https://github.com/spookymushroom/minecraftmap
