@@ -36,14 +36,14 @@ and you'll need *minecraftmap*; I've put in a pull request for the official one 
 
     git clone https://github.com/jason-green-io/minecraftmap
 
-then, inside the new `minecraftmap` folder
+then, inside the new *minecraftmap* folder
 
     python setup.py build
     python setup.py install
 
 ## usage
 
-type `./papyri.py -h`
+type `./papyri.py -h` for help
 
 Once it's done, the contents of the output folder can be served as a website. It's completely static so it can but put in an S3 bucket a github project or hosted locally on your machine by running something like `python3 -m SimpleHTTPServer` inside the output folder.
 
