@@ -10,7 +10,9 @@ Papyri is a Minecraft map item web presenter. It will show all maps created on a
 
 So maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
 
-[Example in use on a server](http://minecraft.greener.ca/#!papyri/)
+[Example 1 - Barlynaland](http://minecraft.greener.ca/#!papyri/)
+
+[Example 2 - various YouTuber server maps](http://jason.green.io/static)
 
 ![screen shot 2018-01-12 at 9 35 04 pm](https://user-images.githubusercontent.com/2853489/34902012-feb1c496-f7e0-11e7-871e-e1a79f971295.png)
 
