@@ -1,6 +1,6 @@
 # papyri version 0.1
 
-Papyri is a Minecraft map item web presenter. It will show all maps created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since Many maps can be created of the same area, Papyri will prioritize redering in this order, *1.* being the top layer:
+Papyri is a Minecraft map item web presenter. It will show all maps created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since Many maps can be created of the same area, Papyri will prioritize rendering in this order, *1.* being the top layer:
 
 1. maps at zoom level 0, rendered oldest to newest
 2. maps	at zoom level 1, rendered oldest to newest
@@ -15,7 +15,7 @@ So maps with higher detail are rendered on top of maps of lower detail and maps 
 
 ## prerequisites
 
-Python 3 (Not tested in Python 2)
+python3 and pip (pip3) (Not tested in python2)
 
 You'll need to install http://jcupitt.github.io/libvips/
 
@@ -31,7 +31,7 @@ some python stuff you'll need:
 
     pip3 install requests pyvips
 
-and you'll need minecraftmap; I've put in a pull request for the official one to fix maps in 1.12, I'm hoping to just pull this from pypi eventaully for now use this fork:
+and you'll need minecraftmap; I've put in a pull request for the official one to fix maps in 1.12, I'm hoping to just pull this from pypi eventaully, but for now use this fork:
 
     git clone https://github.com/jason-green-io/minecraftmap
 
