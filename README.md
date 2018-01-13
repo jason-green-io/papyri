@@ -10,6 +10,8 @@ Papyri is a Minecraft map item web presenter. It will show all maps created on a
 
 So maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
 
+[Example in use on a server](http://minecraft.greener.ca/#!papyri.md)
+
 ![screen shot 2018-01-12 at 9 35 04 pm](https://user-images.githubusercontent.com/2853489/34902012-feb1c496-f7e0-11e7-871e-e1a79f971295.png)
 
 ## prerequisites
@@ -38,8 +40,6 @@ then, inside the new `minecraftmap` folder
 
     python setup.py build
     python setup.py install
-
-
 
 ## usage
 
