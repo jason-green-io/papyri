@@ -50,6 +50,9 @@ Once it's done, the contents of the output folder can be served as a website. It
 
 ## Credits
 
+POI web front end by: http://dynalon.github.io/mdwiki/#!index.md
+(this can actually be used as full fledged wiki with markdown files, pretty cool)
+
 Font provided by: http://www.04.jp.org
 
 DZI viewer provided by: https://github.com/davidmcclure/osd-dzi-viewer and https://openseadragon.github.io
