@@ -1,14 +1,6 @@
-# papyri version 0.1
+# papyri version 0.2
 
-Papyri is a Minecraft map item web presenter. It will show all maps created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since Many maps can be created of the same area, Papyri will prioritize rendering in this order, *1.* being the top layer:
-
-1. maps at zoom level 0, rendered oldest to newest
-2. maps	at zoom level 1, rendered oldest to newest
-3. maps	at zoom level 2, rendered oldest to newest
-4. maps	at zoom level 3, rendered oldest to newest
-5. maps	at zoom level 4, rendered oldest to newest
-
-So maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
+Papyri is a Minecraft map item web presenter. It will show all maps created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since Many maps can be created of the same area, Papyri will prioritize rendering so that maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
 
 [Example 1 - Barlynaland](http://minecraft.greener.ca/#!papyri/)
 
