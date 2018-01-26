@@ -63,11 +63,18 @@ poiRE = "(.*)\n(-?\d+), ?(-?\d+)\n(.*)"
 # regular expression searching for HTML 8bit color codes
 colorRE = "(#[0-9a-fA-F]{6})"
 
-# This is the header of the generated .md file
-fileHeader = "".join(open(os.path.join(cwd, "template/header.md"), "r").readlines())
+# This is the header of the generated .md file, look for a copy in the output, else look for a local copy
+
+
+if os.path.exists(os.path.join(papyriOutputPath, "header.md")):
+    fileHeader = "".join(open(os.path.join(papyriOutputPath, "header.md"), "r").readlines())
+else:
+    fileHeader = "".join(open(os.path.join(cwd, "template/header.md"), "r").readlines())    
+
 
 # Header for the tag tables in markdown
 tableHeader ="""
+
 | |
 |:-|
 """
