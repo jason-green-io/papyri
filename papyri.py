@@ -64,7 +64,7 @@ poiRE = "(.*)\n(-?\d+), ?(-?\d+)\n(.*)"
 colorRE = "(#[0-9a-fA-F]{6})"
 
 # This is the header of the generated .md file
-fileHeader = open(os.path.join(cwd, "template/header.md"), "r").readline()
+fileHeader = "".join(open(os.path.join(cwd, "template/header.md"), "r").readlines())
 
 # Header for the tag tables in markdown
 tableHeader ="""
