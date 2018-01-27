@@ -63,15 +63,6 @@ poiRE = "(.*)\n(-?\d+), ?(-?\d+)\n(.*)"
 # regular expression searching for HTML 8bit color codes
 colorRE = "(#[0-9a-fA-F]{6})"
 
-# This is the header of the generated .md file, look for a copy in the output, else look for a local copy
-
-
-if os.path.exists(os.path.join(papyriOutputPath, "header.md")):
-    fileHeader = "".join(open(os.path.join(papyriOutputPath, "header.md"), "r").readlines())
-else:
-    fileHeader = "".join(open(os.path.join(cwd, "template/header.md"), "r").readlines())    
-
-
 # Header for the tag tables in markdown
 tableHeader ="""
 
@@ -190,7 +181,7 @@ if poi:
                             for tag in tags:
                                 taggedPois[tag].append(POI)
                         else:
-                            taggedPois["untagged"].append(POI)
+                            taggedPois["none"].append(POI)
 
 
 logging.info("Created %s tags", len(taggedPois))
@@ -206,22 +197,19 @@ if not os.path.exists(papyriOutputPath):
     shutil.copy(os.path.join("template", "index.html"), papyriOutputPath)
     shutil.copy(os.path.join("template", "map", "index.html"), os.path.join(papyriOutputPath, "map"))
     shutil.copy(os.path.join("template", "map", "script.js"), os.path.join(papyriOutputPath, "map"))
+    shutil.copy(os.path.join("template", "index.md"), os.path.join(papyriOutputPath, "map"))
     shutil.copy(os.path.join("template", "map", "style.css"), os.path.join(papyriOutputPath, "map"))
     
-logging.info("Writing index.md")
+logging.info("Writing papyri.md")
 
-# write the index.md file containing all the POI
-with open(os.path.join(papyriOutputPath, "index.md"), "w", encoding="utf-8") as poisFile:
-
-    # write the header
-    poisFile.write(fileHeader)
-
+# write the papyri.md file containing all the POI
+with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
     if poi:
-        logging.info("Writing POI to index.md")
+        logging.info("Writing POI to papyri.md")
         # iterate over each tag
         for tag in sorted(taggedPois):
             #write the header for the tag
-            poisFile.write("## {}".format(tag))
+            poisFile.write("## [{}]".format(tag))
             poisFile.write(tableHeader)
 
             # iterate over all the POI in the tag

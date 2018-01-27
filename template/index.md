@@ -15,3 +15,4 @@ To start, name a book starting with the word `papyri` and place it in your inven
     
 Organize your POI using tags. Tags are any words surrounded by `[]`. Example: `[base]` Use HTML colors in the description to change the POI color. Example: `#009900`. 
 
+[Click here for the list of POI](papyri.md)
