@@ -199,23 +199,6 @@ if not os.path.exists(papyriOutputPath):
     shutil.copy(os.path.join("template", "map", "script.js"), os.path.join(papyriOutputPath, "map"))
     shutil.copy(os.path.join("template", "index.md"), os.path.join(papyriOutputPath, "map"))
     shutil.copy(os.path.join("template", "map", "style.css"), os.path.join(papyriOutputPath, "map"))
-    
-logging.info("Writing papyri.md")
-
-# write the papyri.md file containing all the POI
-with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
-    if poi:
-        logging.info("Writing POI to papyri.md")
-        # iterate over each tag
-        for tag in sorted(taggedPois):
-            #write the header for the tag
-            poisFile.write("## [{}]".format(tag))
-            poisFile.write(tableHeader)
-
-            # iterate over all the POI in the tag
-            for poi in taggedPois[tag]:
-                poisFile.write(poiFormat.format(*poi))
-
         
 
 # path to maps
@@ -233,7 +216,7 @@ mapFiles.sort(key=os.path.getmtime)
 logging.info("Found %s maps", len(mapFiles))
 
 # create the output map images, one per dimension
-background = {d: PIL.Image.new('RGBA', (canvasSize, canvasSize), (0, 0, 0, 255)) for d in dimDict}
+background = {d: PIL.Image.new('RGBA', (canvasSize, canvasSize), (0, 0, 0, 0)) for d in dimDict}
 #bg = {d: pyvips.Image.black(canvasSize, canvasSize) for d in dimDict}
 
 # create a list for the map objects
@@ -278,6 +261,38 @@ for m in mapFileObjs:
     #img_w, img_h = img.size
     #bg_w, bg_h = background.size
     #offset = ((bg_w - img_w) / 2, (bg_h - img_h) / 2)
+
+mapStats = {}
+    
+# Creating map statistics
+for d in dimDict:
+    mapStats.update([(d, len([a for a in background[d].getdata() if a[3] != 0]) / len(background[d].getdata()))])
+
+
+mapStatsStr = ", ".join([dimDict[d] + " " + str(s) + "%" for d, s in mapStats.items()]) + "\n\n"
+
+    
+logging.info("Writing papyri.md")
+
+# write the papyri.md file containing all the POI
+with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
+
+    if poi:
+        poisFile.write("### Map stats\n")
+        poisFile.write(mapStatsStr)
+        logging.info("Writing POI to papyri.md")
+        # iterate over each tag
+        for tag in sorted(taggedPois):
+            #write the header for the tag
+            poisFile.write("## [{}]".format(tag))
+            poisFile.write(tableHeader)
+
+            # iterate over all the POI in the tag
+            for poi in taggedPois[tag]:
+                poisFile.write(poiFormat.format(*poi))
+
+
+
 
 if poi:
 
