@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import sys
 import minecraftmap
 import os
@@ -266,7 +267,7 @@ mapStats = {}
     
 # Creating map statistics
 for d in dimDict:
-    mapStats.update([(d, len([a for a in background[d].getdata() if a[3] != 0]) / len(background[d].getdata()))])
+    mapStats.update([(d, len([a for a in background[d].getdata() if a[3] != 0]) / len(background[d].getdata()) * 100 )])
 
 
 mapStatsStr = ", ".join([dimDict[d] + " " + str(s) + "%" for d, s in mapStats.items()]) + "\n\n"
