@@ -15,7 +15,7 @@ import collections
 import argparse
 import logging
 
-
+# get the current running folder to find the font and template folders
 cwd = os.path.dirname(os.path.abspath(__file__))
 
 # setup the parser for command line options
@@ -44,7 +44,7 @@ mcdata = args.mcdata
 papyriOutputPath = args.output
 
 # This is the font used for the POI index number
-fontpath = os.path.join("04B_03B_.TTF")
+fontPath = os.path.join(cwd, "04B_03B_.TTF")
 
 # scale factor
 scaleFactor = 1
@@ -194,12 +194,15 @@ if not os.path.exists(papyriOutputPath):
     os.makedirs(os.path.join(papyriOutputPath, "map"))
 
     # copy the web template files to the output folders
+
+    templatePath = os.path.join(cwd, "template")
+
     logging.info("Copying template web files")
-    shutil.copy(os.path.join("template", "index.html"), papyriOutputPath)
-    shutil.copy(os.path.join("template", "map", "index.html"), os.path.join(papyriOutputPath, "map"))
-    shutil.copy(os.path.join("template", "map", "script.js"), os.path.join(papyriOutputPath, "map"))
-    shutil.copy(os.path.join("template", "index.md"), os.path.join(papyriOutputPath, "map"))
-    shutil.copy(os.path.join("template", "map", "style.css"), os.path.join(papyriOutputPath, "map"))
+    shutil.copy(os.path.join(templatePath, "index.html"), papyriOutputPath)
+    shutil.copy(os.path.join(templatePath, "map", "index.html"), os.path.join(papyriOutputPath, "map"))
+    shutil.copy(os.path.join(templatePath, "map", "script.js"), os.path.join(papyriOutputPath, "map"))
+    shutil.copy(os.path.join(templatePath, "index.md"), os.path.join(papyriOutputPath, "map"))
+    shutil.copy(os.path.join(templatePath, "map", "style.css"), os.path.join(papyriOutputPath, "map"))
         
 
 # path to maps
@@ -327,7 +330,7 @@ if poi:
                 draw.rectangle([point1, point2], fill=each[1])
 
             # add the POI id as a number
-            draw.text((14, 2), str(poi[6]), font=PIL.ImageFont.truetype(fontpath,8))
+            draw.text((14, 2), str(poi[6]), font=PIL.ImageFont.truetype(fontPath,8))
 
             # add the player head
             imgTest.paste(PIL.Image.open(io.BytesIO(response.content)), (2, 2))
