@@ -30,6 +30,8 @@ parser.add_argument("--overlay", help="add overlay showing map IDs",
 action='store_true')
 parser.add_argument("--nostitch", help=
 "disable generating the map, useful if you only want the overlay displayed", action="store_false")
+parser.add_argument("--mapstats", help="generate stats on map coverage of selected size", action="store_true")
+
 
 # Setup the logger
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
@@ -46,6 +48,9 @@ nostitch = args.nostitch
 
 # Are we writing pois?
 poi = args.poi
+
+# are we creating stats?
+mapstats = args.mapstats
 
 # Set the input minecraft world folder
 mcdata = args.mcdata
@@ -93,13 +98,14 @@ poiFormat = "|![]({0}{6}.png) **{1}**<br>[{2}, {3}, {6}]({4})<br>{5}|\n"
 
 poiMd = ""
 
-# location of the player data files
-playerDatFilesPath = os.path.join(mcdata, "playerdata", "*.dat")
+if poi:
+    # location of the player data files
+    playerDatFilesPath = os.path.join(mcdata, "playerdata", "*.dat")
 
-# list of all the player data files
-playerDatFiles = glob.glob(playerDatFilesPath)
+    # list of all the player data files
+    playerDatFiles = glob.glob(playerDatFilesPath)
 
-logging.info("Found %s player(s)", len(playerDatFiles))
+    logging.info("Found %s player(s)", len(playerDatFiles))
 
 # empty defaultdict for all the tags
 taggedPois = collections.defaultdict(list)
@@ -217,15 +223,20 @@ if not os.path.exists(papyriOutputPath):
 
     # copy the web template files to the output folders
 
-    templatePath = os.path.join(cwd, "template")
+templatePath = os.path.join(cwd, "template")
 
-    logging.info("Copying template web files")
-    shutil.copy(os.path.join(templatePath, "index.html"), papyriOutputPath)
-    shutil.copy(os.path.join(templatePath, "map", "index.html"), os.path.join(papyriOutputPath, "map"))
-    shutil.copy(os.path.join(templatePath, "map", "script.js"), os.path.join(papyriOutputPath, "map"))
-    shutil.copy(os.path.join(templatePath, "index.md"), os.path.join(papyriOutputPath, "map"))
-    shutil.copy(os.path.join(templatePath, "map", "style.css"), os.path.join(papyriOutputPath, "map"))
+requiredFiles = [("index.html", ""),
+("index.md", ""),
+("map/index.html", "map"),
+("map/script.js", "map"),
+("map/style.css", "map")]
+for rFile in requiredFiles:
+    if not os.path.exists(os.path.join(papyriOutputPath, rFile[0])):
 
+        print("yup")
+        logging.info("Copying {} template web files".format(rFile))
+        shutil.copy(os.path.join(templatePath, rFile[0]),
+                    os.path.join(papyriOutputPath, rFile[1]))
 
 # path to maps
 mapsInputGlob = os.path.join(mcdata, "data", "map*.dat")
@@ -396,9 +407,9 @@ for d in dimDict:
     mapOutputPath = os.path.join(papyriOutputPath, "map", "dim", dimDict[d])
 
     # set the output path for PNG
-    outPngFile = os.path.join(mapOutputPath, 'out{}.png'.format(d))
+    #outPngFile = os.path.join(mapOutputPath, 'out{}.png'.format(d))
 
-    logging.info("Saving .png for %s", dimDict[d])
+    #logging.info("Saving .png for %s", dimDict[d])
 
     # save the PNG
     # background[d].save(outPngFile)
@@ -406,56 +417,44 @@ for d in dimDict:
     # set the output path of DZI
     outputDir = os.path.join(mapOutputPath, '{}_files'.format(dimDict[d]))
 
-    # create a vips image
-    # dz = pyvips.Image.new_from_file(outPngFile, access='sequential')
-
     # delete the DZI if it exsists
     if os.path.exists(outputDir):
         shutil.rmtree(outputDir)
 
     logging.info("Saving DZI for %s", dimDict[d])
 
-    # save the DZI
-    # dz.dzsave(os.path.join(mapOutputPath, '{}'.format(dimDict[d])), suffix=".png")
-    # print(background)
-    # background = pyvips.Image.new_from_memory(background, canvasSize, canvasSize, 4, 'uchar')
-    # background.write_to_file(outPngFile)
-    # print(layers)
-
-    #    final = layers[0].composite(layers[1:], ['over'] * (len(layers) - 1)) if len(layers) > 1 else layers[0]
-
     vips_image.dzsave(os.path.join(mapOutputPath, "{}".format(dimDict[d])), suffix=".png")
 
+if mapstats:
+    mapStats = {}
 
-mapStats = {}
-
-'''
-# Creating map statistics
-for d in dimDict:
-    mapStats.update([(d, len([a for a in background[d].getdata() if a[3] != 0]) / len(background[d].getdata()) * 100 )])
+    '''
+    # Creating map statistics
+    for d in dimDict:
+        mapStats.update([(d, len([a for a in background[d].getdata() if a[3] != 0]) / len(background[d].getdata()) * 100 )])
 
 
-mapStatsStr = ", ".join([dimDict[d] + " " + str(s) + "%" for d, s in mapStats.items()]) + "\n\n"
-'''
+    mapStatsStr = ", ".join([dimDict[d] + " " + str(s) + "%" for d, s in mapStats.items()]) + "\n\n"
+    '''
 
 logging.info("Writing papyri.md")
 
-# write the papyri.md file containing all the POI
-with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
+if poi:
+    # write the papyri.md file containing all the POI
+    with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
 
-    if poi:
-        #poisFile.write("### Map stats\n")
-        #poisFile.write(mapStatsStr)
-        logging.info("Writing POI to papyri.md")
-        # iterate over each tag
-        for tag in sorted(taggedPois):
-            #write the header for the tag
-            poisFile.write("## [{}]".format(tag))
-            poisFile.write(tableHeader)
+            #poisFile.write("### Map stats\n")
+            #poisFile.write(mapStatsStr)
+            logging.info("Writing POI to papyri.md")
+            # iterate over each tag
+            for tag in sorted(taggedPois):
+                #write the header for the tag
+                poisFile.write("## [{}]".format(tag))
+                poisFile.write(tableHeader)
 
-            # iterate over all the POI in the tag
-            for poi in taggedPois[tag]:
-                poisFile.write(poiFormat.format(*poi))
+                # iterate over all the POI in the tag
+                for poi in taggedPois[tag]:
+                    poisFile.write(poiFormat.format(*poi))
 
 
 
