@@ -350,7 +350,7 @@ if poi:
 
 
     logging.info("Created %s tags", len(taggedPois))
-
+"""
 # create the output folders if they don't exsist
 if not os.path.exists(papyriOutputPath):
     logging.info("Creating output folders")
@@ -358,20 +358,13 @@ if not os.path.exists(papyriOutputPath):
     os.makedirs(os.path.join(papyriOutputPath, "map"))
 
     # copy the web template files to the output folders
-
+"""
 templatePath = os.path.join(cwd, "template")
 
-requiredFiles = [("index.html", ""),
-("index.md", ""),
-("openseadragon", ""),
-("images", "")]
-for rFile in requiredFiles:
-    if not os.path.exists(os.path.join(papyriOutputPath, rFile[0])):
-
-        print("yup")
-        logging.info("Copying {} template web files".format(rFile))
-        shutil.copy(os.path.join(templatePath, rFile[0]),
-                    os.path.join(papyriOutputPath, rFile[1]))
+if not os.path.exists(papyriOutputPath):
+    
+    logging.info("Copying template web files")
+    shutil.copytree(templatePath, papyriOutputPath)
 
 # path to maps
 mapsInputGlob = os.path.join(mcdata, "data", "map*.dat")
@@ -556,7 +549,7 @@ for d in dimDict:
 
 
             # set the output path of DZI
-            outputDir = os.path.join(mapOutputPath, '{}_files'.format(bigMapName))
+            outputDir = os.path.join(mapOutputPath, '{}.dzi_files'.format(bigMapName))
 
             # delete the DZI if it exsists
             if os.path.exists(outputDir):
@@ -678,8 +671,17 @@ for d in dimDict:
         y=y, width=canvasSize))
 
     tileSources = "tileSources: " + json.dumps(tileSource, indent=2)          
-    overlays = "overlays: " + json.dumps(poiOverlays, indent=2)
-    index = indexTemplateTop + tileSources + ",\n" + overlays + indexTemplateBottom + "\n".join(poiImages)
+
+    index = indexTemplateTop + tileSources + ",\n"
+
+
+    if poi:
+        index += "overlays: " + json.dumps(poiOverlays, indent=2)
+
+    index += indexTemplateBottom
+
+    if poi:
+        index += "\n".join(poiImages)
 
     with open(os.path.join(mapOutputPath, "index.html"), "+w", encoding="utf-8") as outFile:
         outFile.write(index)
