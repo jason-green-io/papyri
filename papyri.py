@@ -549,7 +549,7 @@ for d in dimDict:
 
 
             # set the output path of DZI
-            outputDir = os.path.join(mapOutputPath, '{}.dzi_files'.format(bigMapName))
+            outputDir = os.path.join(mapOutputPath, '{}_files'.format(bigMapName))
 
             # delete the DZI if it exsists
             if os.path.exists(outputDir):
@@ -561,7 +561,7 @@ for d in dimDict:
                 background.save(f, format="png")
 
             logging.info("Converting png to deepzoom")
-            pyvips.Image.new_from_file(outPngFile, access='sequential').dzsave(os.path.join(mapOutputPath, bigMapName + ".dzi"), suffix=".png")
+            pyvips.Image.new_from_file(outPngFile, access='sequential').dzsave(os.path.join(mapOutputPath, bigMapName), suffix=".png")
 
 if mapstats:
     mapStats = {}
