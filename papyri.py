@@ -287,7 +287,7 @@ if poi:
             # check if the book starts with "papyri"
             bookName = book.get("tag", {}).get("display", {}).get("Name", "")
 
-            if "papyri" in bookName:
+            if "papyri" in bookName.lower():
 
                 # iterate over the pages
                 for page in book.get("tag",{}).get("pages", []):
