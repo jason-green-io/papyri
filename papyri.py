@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-
+from pointsandrectangles import Point, Rect
 import sys
 import minecraftmap
 import os
 import glob
 import PIL
+import PIL.ImageOps
 import pyvips
 import shutil
 import io
@@ -15,6 +16,7 @@ import collections
 import argparse
 import logging
 import numpy
+import json
 
 
 # get the current running folder to find the font and template folders
@@ -25,7 +27,7 @@ parser = argparse.ArgumentParser(description='convert minecraft maps to the web'
 parser.add_argument('--poi', action='store_true', help="generate POI")
 parser.add_argument('--mcdata', help="input path to minecraft server data", required=True)
 parser.add_argument('--output', help="output path for web stuff", required=True)
-parser.add_argument("--size", help="size in blocks of map to render, centered on 0,0, default is 2000", type=int, default=2000)
+parser.add_argument('--zoomlevel', help="size of maps generated in mc zoom levels, 8 = 65k, 7 = 32k", default=6)
 parser.add_argument("--overlay", help="add overlay showing map IDs",
 action='store_true')
 parser.add_argument("--nostitch", help=
@@ -65,11 +67,10 @@ font = PIL.ImageFont.truetype(fontPath,8)
 # scale factor
 scaleFactor = 1
 
-# viewer zoom level
-viewerZoom = args.size * 0.0092
-
 # this is how much of the map is rendered
-canvasSize = args.size * scaleFactor
+canvasSize = 2 ** (8 + args.zoomlevel)
+
+viewerZoom = 1
 
 # Format for the structure of a link pointing to a specific location on the map 
 linkFormat = "map/#dim/overworld/{}/{}/" + str(viewerZoom)
@@ -89,14 +90,91 @@ dimDict = {-1: "nether", 0: "overworld", 1: "end"}
 # Header for the tag tables in markdown
 tableHeader ="""
 
-| |
-|:-|
+| | |
+|:-|:-|
 """
 
 # row format for each POI in markdown
-poiFormat = "|![]({0}{6}.png) **{1}**<br>[{2}, {3}, {6}]({4})<br>{5}|\n"
+poiFormat = "|![]({0}{6}.png)|**{1}**<br>[{2}, {3}, {6}]({4})<br>{5}|\n"
 
 poiMd = ""
+
+indexTemplateTop = """
+<title>Papyri</title>
+<style>
+body {
+  margin: 0;
+}
+</style>
+<div id="openseadragon1" style="background-color: #512717; margin: 0 auto; width: 100%; height: 100%;"></div>
+<script src="../../openseadragon/openseadragon.min.js"></script>
+<script   src="https://code.jquery.com/jquery-3.3.1.min.js"   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="   crossorigin="anonymous"></script>
+<script type="text/javascript">
+    var viewer = OpenSeadragon({
+        id: "openseadragon1",
+        showNavigator: true,
+        //minZoomImageRatio: 0.5,
+        //defaultZoomLevel: 64,
+        //maxZoomLevel: 6,
+        //minZoomLevel: 64,
+        maxZoomPixelRatio: 2,
+        //minPixelRatio: 1.5,
+        imediateRender: true,
+        prefixUrl: "../../images/",
+navImages: {
+    zoomIn: {
+    REST: 'zoominrest.png',
+    GROUP: 'zoomin.png',
+    HOVER: 'zoomindown.png',
+    DOWN: 'zoomindown.png'
+    },
+    zoomOut: {
+    REST: 'zoomoutrest.png',
+    GROUP: 'zoomout.png',
+    HOVER: 'zoomoutdown.png',
+    DOWN: 'zoomoutdown.png'
+        },
+    home: {
+    REST: 'homerest.png',
+    GROUP: 'home.png',
+    HOVER: 'homedown.png',
+    DOWN: 'homedown.png'
+        },
+    fullpage: {
+    REST: 'fullscreenrest.png',
+    GROUP: 'fullscreen.png',
+    HOVER: 'fullscreendown.png',
+    DOWN: 'fullscreendown.png'
+        }
+
+    },
+
+
+"""
+indexTemplateBottom = """
+
+});
+viewer.addHandler('open', () => {
+      let toggleOverlayButton = new OpenSeadragon.Button({
+        tooltip: 'Toggle Overlays',
+        srcRest: '../../images/poirest.png',
+        srcGroup: '../../images/poi.png',
+        srcHover: '../../images/poidown.png',
+        srcDown: '../../images/poidown.png',
+
+      });
+
+    viewer.addControl(toggleOverlayButton.element, { anchor: OpenSeadragon.ControlAnchor.TOP_LEFT });
+    toggleOverlayButton.addHandler("click", function (data) {
+    p_lays=document.getElementsByClassName("poioverlay");
+    for(let i=0;i<p_lays.length;i++)p_lays[i].style.display==="none"?p_lays[i].style.display="block":p_lays[i].style.display="none";
+
+
+    });
+    
+    });
+</script>
+"""
 
 if poi:
     # location of the player data files
@@ -111,7 +189,6 @@ if poi:
 taggedPois = collections.defaultdict(list)
 
 # empty list of all maps coords for links to maps
-mapCoords = collections.defaultdict(list)
 
 def unpack_nbt(tag):
     """
@@ -124,6 +201,65 @@ def unpack_nbt(tag):
         return dict((i.name, unpack_nbt(i)) for i in tag.tags)
     else:
         return tag.value
+
+
+class OrderedSet(collections.MutableSet):
+
+    def __init__(self, iterable=None):
+        self.end = end = [] 
+        end += [None, end, end]         # sentinel node for doubly linked list
+        self.map = {}                   # key --> [key, prev, next]
+        if iterable is not None:
+            self |= iterable
+
+    def __len__(self):
+        return len(self.map)
+
+    def __contains__(self, key):
+        return key in self.map
+
+    def add(self, key):
+        if key not in self.map:
+            end = self.end
+            curr = end[1]
+            curr[2] = end[1] = self.map[key] = [key, curr, end]
+
+    def discard(self, key):
+        if key in self.map:        
+            key, prev, next = self.map.pop(key)
+            prev[2] = next
+            next[1] = prev
+
+    def __iter__(self):
+        end = self.end
+        curr = end[2]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[2]
+
+    def __reversed__(self):
+        end = self.end
+        curr = end[1]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[1]
+
+    def pop(self, last=True):
+        if not self:
+            raise KeyError('set is empty')
+        key = self.end[1][0] if last else self.end[2][0]
+        self.discard(key)
+        return key
+
+    def __repr__(self):
+        if not self:
+            return '%s()' % (self.__class__.__name__,)
+        return '%s(%r)' % (self.__class__.__name__, list(self))
+
+    def __eq__(self, other):
+        if isinstance(other, OrderedSet):
+            return len(self) == len(other) and list(self) == list(other)
+        return set(self) == set(other)
 
 
 # counter for generating the POI indexes
@@ -195,9 +331,9 @@ if poi:
 
                         # if there's colors, get them, otherwise, default to black
                         if colors:
-                            color = colors
+                            color = colors[0]
                         else:
-                            color = ["black"]
+                            color = "#ffffff"
 
                         # prepare a POI for writing
                         POI = (uuid, title, x,z, linkFormat.format(viewerx,viewerz), desc, num, color, dim)
@@ -227,9 +363,8 @@ templatePath = os.path.join(cwd, "template")
 
 requiredFiles = [("index.html", ""),
 ("index.md", ""),
-("map/index.html", "map"),
-("map/script.js", "map"),
-("map/style.css", "map")]
+("openseadragon", ""),
+("images", "")]
 for rFile in requiredFiles:
     if not os.path.exists(os.path.join(papyriOutputPath, rFile[0])):
 
@@ -254,24 +389,62 @@ mapFileObjs = []
 
 logging.info("Parsing map .dat files")
 
+
+bigMaps = set()
+
 # get all the map objects
 for mapFile in mapFiles:
-    mapFileObjs.append((os.path.basename(mapFile).split('.')[0],
-    minecraftmap.Map(mapFile,eco=False)))
+    mapObj = minecraftmap.Map(mapFile,eco=False)
+    mapFileObjs.append((os.path.basename(mapFile).split('.')[0], mapObj))
 
 
 # sort them by zoom level
 mapFileObjs.sort(key=lambda m: m[1].zoomlevel, reverse=True)
 
-mapFileObjsByDim = collections.defaultdict(list)
+mapFileObjsByDim = collections.defaultdict(lambda:
+    collections.defaultdict(collections.OrderedDict))
+
+mapLabelsByDim = collections.defaultdict(lambda:
+    collections.defaultdict(lambda: collections.defaultdict(set)))
 
 for mapFileObj in mapFileObjs:
-    mapFileObjsByDim[mapFileObj[1].dimension].append(mapFileObj)
+    mapObj = mapFileObj[1]
+    name = mapFileObj[0]
+    zoom = int(mapObj.zoomlevel)
+    d = mapObj.dimension
+    xc = mapObj.centerxz[0]
+    zc = mapObj.centerxz[1]
 
+    p1 = Point(xc - 128 * 2 ** zoom // 2,
+                zc- 128 * 2 ** zoom // 2)
+    p2 = Point(xc + 128 * 2 ** zoom // 2,
+                zc + 128 * 2 ** zoom // 2)
+    rect = Rect(p1, p2)
+
+    p3 = Point(p1.as_tuple()[0], p2.as_tuple()[1])
+    p4 = Point(p2.as_tuple()[0], p1.as_tuple()[1])
+
+    for p in [p1, p2, p3, p4]:
+        x = p.as_tuple()[0]
+        z = p.as_tuple()[1]
+
+        bp1 = Point(divmod(x - 64, canvasSize)[0] * canvasSize - 64, divmod(z -
+        64, canvasSize)[0] * canvasSize - 64)
+        bp2 = bp1 + Point(canvasSize, canvasSize)
+        
+        bigMap = Rect(bp1, bp2)
+
+        btl = bigMap.top_left().as_tuple()
+        bbr = bigMap.bottom_right().as_tuple()
+        
+        if bigMap.overlaps(rect):
+            mapFileObjsByDim[d][(btl,bbr)][name] = mapObj
+            mapLabelsByDim[d][(btl,bbr)][(xc, zc, zoom)].add(name)
+print(mapLabelsByDim)
 
 # create the dimension output folder if they don't exsist
 for d in dimDict:
-    mapOutputPath = os.path.join(papyriOutputPath, "map", "dim", dimDict[d])
+    mapOutputPath = os.path.join(papyriOutputPath, "map", dimDict[d])
     if not os.path.exists(mapOutputPath):
         logging.info("Creating folder for %s", dimDict[d])
         os.makedirs(mapOutputPath)
@@ -279,151 +452,123 @@ for d in dimDict:
 
 # iterate over all the map objects
 for d in dimDict:
+    bigMaps = mapFileObjsByDim[d].items()
+    logging.info("Rendering {} big maps for {}".format(len(bigMaps), dimDict[d]))
     # put aside some stuff for stuff
-    memory = []
+    for bigMap in bigMaps:
+        
+        bigMapName = "{}.{}.{}".format(d, *bigMap[0][0])
 
-    # create the large backgound iamge
-    background = PIL.Image.new('RGBA', (canvasSize, canvasSize), (0, 0, 0, 0))
+        # create the large backgound iamge
+        background = PIL.Image.new('RGB', (canvasSize - (canvasSize // 64) * 2,
+        canvasSize - (canvasSize // 64) * 2), (204, 178,
+        132))
+        background = PIL.ImageOps.expand(background ,border=canvasSize // 64, fill=(124, 109,
+        82))
+        p1 = Point(*bigMap[0][0])
+        p2 = Point(*bigMap[0][1])
 
-    # iterate over the maps
-    for mt in mapFileObjsByDim[d]:
-        m = mt[1]
-        name = mt[0]
-        dimension = d
-        zoom = m.zoomlevel
+        # contextRect = Rect(Point())
+        # iterate over the maps
+        for littleMap in bigMap[1].items():
+            m = littleMap[1]
+            name = littleMap[0]
+            dimension = d
+            zoom = m.zoomlevel
 
-        xc = int(m.centerxz[0]) * scaleFactor + canvasSize // 2
-        zc = int(m.centerxz[1]) * scaleFactor + canvasSize // 2
-        x = xc - 128 * 2 ** m.zoomlevel // 2 * scaleFactor
-        z = zc - 128 * 2 ** m.zoomlevel // 2 * scaleFactor
+            xc = int(m.centerxz[0])
+            zc = int(m.centerxz[1])
+            centerPoint = Point(xc, zc) - p1
+
+            x = xc - 128 * 2 ** m.zoomlevel // 2 * scaleFactor
+            z = zc - 128 * 2 ** m.zoomlevel // 2 * scaleFactor
+
+            topLeft = Point(x,z) - p1
 
 
-        mapCoords[(xc, zc, zoom, d)].append(name)
+            # skip if the center of the map isn't in the canvas
+
+            if nostitch:
+                logging.info("Stitching map at %s, %s zoom level %s relative coords %s in %s",
+                x, z, zoom, topLeft, bigMapName)
+
+                # create an image from the .dat data
+                m.genimage()
+
+                # rescale the image base on the zoom level
+                m.rescale(num=scaleFactor)
+
+                background.paste(m.im, topLeft.as_tuple(), m.im)
 
 
-        # skip if the center of the map isn't in the canvas
-        if (x >= canvasSize * scaleFactor or x < 0) or (z >= canvasSize * scaleFactor or z < 0):
-            continue
+        if overlay:
 
+            colorList = ["red", "green", "blue", "yellow", "purple"]
+            draw = PIL.ImageDraw.Draw(background)
+
+            print(mapLabelsByDim[d][bigMap[0]])
+            for uniqMap in mapLabelsByDim[d][bigMap[0]].items():
+
+                ((xc, zc, zoom), names) = uniqMap
+
+                logging.info("Overlaying {}".format(uniqMap))
+
+                centerPoint = Point(xc, zc) - p1
+
+                x = xc - 128 * 2 ** zoom // 2 * scaleFactor
+                z = zc - 128 * 2 ** zoom // 2 * scaleFactor
+
+                topLeft = Point(x,z) - p1
+                bottomRight = topLeft + Point(128 * 2 ** zoom, 128 * 2 ** zoom)
+
+                mapNames = "\n".join(names)
+
+                w, h = draw.textsize(mapNames, font=font)
+
+                draw.rectangle([topLeft.as_tuple(), bottomRight.as_tuple()], outline=colorList[zoom])
+                textx = centerPoint.as_tuple()[0] - (w / 2)
+                textz = centerPoint.as_tuple()[1] - (h / 2)
+
+
+                draw.text((textx - 1, textz), mapNames, font=font, fill="black")
+                draw.text((textx + 1, textz), mapNames, font=font, fill="black")
+                draw.text((textx, textz - 1), mapNames, font=font, fill="black")
+                draw.text((textx, textz + 1), mapNames, font=font, fill="black")
+                draw.text((textx, textz), mapNames, font=font, fill=colorList[zoom])
+        """
+        numpy_image = numpy.asarray(background)
+        height, width, bands = numpy_image.shape
+        linear = numpy_image.reshape(width * height * bands)
+        data = linear.data
+        memory.append(data)
+        
+        vips_image = pyvips.Image.new_from_memory(data, width, height, bands, 'uchar')
+        del memory
+        """
         if nostitch:
-            logging.info("Stitching map at %s, %s zoom level %s in %s", m.centerxz[0], m.centerxz[1], zoom, dimDict[dimension])
+            # set the output path for map
+            mapOutputPath = os.path.join(papyriOutputPath, "map", dimDict[d])
 
-            # create an image from the .dat data
-            m.genimage()
+            # set the output path for PNG
+            outPngFile = os.path.join(mapOutputPath, '{}.png'.format(bigMapName))
 
-            # rescale the image base on the zoom level
-            m.rescale(num=scaleFactor)
-
-            background.paste(m.im, (x, z), m.im)
+            #logging.info("Saving .png for %s", dimDict[d])
 
 
-    if poi:
-        logging.info("Adding POIs to stiched map")
+            # set the output path of DZI
+            outputDir = os.path.join(mapOutputPath, '{}_files'.format(bigMapName))
 
-        # iterate over the tags to add POI to map
-        for tag in sorted(taggedPois):
-            # iterate over POI in tag
-            for poi in [p for p in taggedPois[tag] if p[8] == d]:
-                logging.info(poi)
-                # get POI player head 
-                response = requests.get("https://crafatar.com/avatars/{}?size=8".format(poi[0]))
+            # delete the DZI if it exsists
+            if os.path.exists(outputDir):
+                shutil.rmtree(outputDir)
 
-                #create a new base POI
-                imgTest = PIL.Image.new("RGBA", (24, 12), "black")
+            logging.info("Saving PNG for %s", bigMapName)
+            # save the PNG
+            with open(outPngFile, "wb+") as f:
+                background.save(f, format="png")
 
-                # object to draw on base POI
-                draw = PIL.ImageDraw.Draw(imgTest)
-
-                # get the number of colors in POI
-                totalColors = len(poi[7])
-
-                # calculate how high a color bar will be 
-                rectHeight = 12 // totalColors
-
-                # iterate over each color
-                for each in enumerate(poi[7]):
-                    # draw a color bar on base POI
-                    point1 = (0, rectHeight * each[0])
-                    point2 = (11, rectHeight * each[0] + rectHeight)
-                    draw.rectangle([point1, point2], fill=each[1])
-
-                # add the POI id as a number
-                draw.text((14, 2), str(poi[6]), font=font)
-
-                # add the player head
-                imgTest.paste(PIL.Image.open(io.BytesIO(response.content)), (2, 2))
-
-                #mask = imgTest.convert("L").point(lambda x: min(x, 100))
-                #imgAlpha = imgTest
-                #imgAlpha.putalpha(mask)
-                #imgBorder = PIL.Image.new("RGBA", (26, 10), "black")
-                #imgBorder.paste(imgTest, (1,1))
-
-                # add the POI to the output image
-                background.paste(imgTest, (poi[2] * scaleFactor + canvasSize //
-                2 - 12, poi[3] * scaleFactor + canvasSize // 2 - 4))
-
-                # save the base POI slightly scaled up for index.md
-                imgOut = imgTest.resize((48, 24))
-                imgOut.save(os.path.join(papyriOutputPath, poi[0] + str(poi[6]) + ".png"), "png")
-
-    if overlay:
-        colorList = ["red", "green", "blue", "yellow", "purple"]
-        draw = PIL.ImageDraw.Draw(background)
-        for m in [m for m in mapCoords.items() if m[0][3] == d]:
-            logging.info("Overlaying {}".format(m))
-            xc = m[0][0]
-            zc = m[0][1]
-            zoom = m[0][2]
-            d = m[0][3]
-            x = xc - 128 * 2 ** zoom // 2 * scaleFactor
-            z = zc - 128 * 2 ** zoom // 2 * scaleFactor
-            nameList = m[1]
-            size = 128 * 2 ** zoom * scaleFactor
-            mapNames = "\n".join(nameList)
-
-            w, h = draw.textsize(mapNames, font=font)
-
-            draw.rectangle([(x, z), (x + size, z + size)],
-            outline=colorList[zoom])
-            textx = xc-(w/2)
-            textz = zc-(h/2)
-
-
-            draw.text((textx - 1, textz), mapNames, font=font, fill="black")
-            draw.text((textx + 1, textz), mapNames, font=font, fill="black")
-            draw.text((textx, textz - 1), mapNames, font=font, fill="black")
-            draw.text((textx, textz + 1), mapNames, font=font, fill="black")
-            draw.text((textx, textz), mapNames, font=font, fill=colorList[zoom])
-
-    numpy_image = numpy.asarray(background)
-    height, width, bands = numpy_image.shape
-    linear = numpy_image.reshape(width * height * bands)
-    data = linear.data
-    memory.append(data)
-    vips_image = pyvips.Image.new_from_memory(data, width, height, bands, 'uchar')
-
-    # set the output path for map
-    mapOutputPath = os.path.join(papyriOutputPath, "map", "dim", dimDict[d])
-
-    # set the output path for PNG
-    #outPngFile = os.path.join(mapOutputPath, 'out{}.png'.format(d))
-
-    #logging.info("Saving .png for %s", dimDict[d])
-
-    # save the PNG
-    # background[d].save(outPngFile)
-
-    # set the output path of DZI
-    outputDir = os.path.join(mapOutputPath, '{}_files'.format(dimDict[d]))
-
-    # delete the DZI if it exsists
-    if os.path.exists(outputDir):
-        shutil.rmtree(outputDir)
-
-    logging.info("Saving DZI for %s", dimDict[d])
-
-    vips_image.dzsave(os.path.join(mapOutputPath, "{}".format(dimDict[d])), suffix=".png")
+            logging.info("Converting png to deepzoom")
+            pyvips.Image.new_from_file(outPngFile, access='sequential').dzsave(os.path.join(mapOutputPath, bigMapName + ".dzi"), suffix=".png")
 
 if mapstats:
     mapStats = {}
@@ -439,6 +584,105 @@ if mapstats:
 
 logging.info("Writing papyri.md")
 
+
+
+for d in dimDict:
+
+
+    if poi:
+        logging.info("Adding POIs to stiched map")
+        poiOverlays = []
+        poiImages = []
+        # iterate over the tags to add POI to map
+        for tag in sorted(taggedPois):
+            # iterate over POI in tag
+            for poi in [p for p in taggedPois[tag] if p[8] == d]:
+                uuid, title, x, z, link, desc, num, color, dim = poi
+                
+                logging.info(poi)
+                # get POI player head 
+                response = requests.get("https://mc-heads.net/avatar/{}/16".format(uuid))
+                avatar = PIL.Image.open(io.BytesIO(response.content))
+
+                rgbBack = tuple(int(color.lstrip('#')[i:i+2], 16) for i in (0, 2 ,4))
+
+                textColor = "#000000" if (rgbBack[0] * 0.299 + rgbBack[1] * 0.587 + rgbBack[2] * 0.114) > 186 else "#ffffff"
+                
+                
+                poiBack = PIL.Image.open(os.path.join(cwd, "template", "bigbook.png"))
+                # object to draw on base POI
+                textBack = PIL.Image.new("RGBA", (8, 8), color)
+
+                draw = PIL.ImageDraw.Draw(textBack)
+                w, h = draw.textsize(str(num), font=font)
+                draw.text((8 // 2 - w // 2 , 1), str(num), font=font, fill=textColor)
+                textBack = textBack.resize((16, 16))
+                """
+                # get the number of colors in POI
+                totalColors = len(color)
+
+                # calculate how high a color bar will be 
+                rectHeight = 16 // totalColors
+
+                # iterate over each color
+                for each in enumerate(color):
+                    # draw a color bar on base POI
+                    point1 = (0, rectHeight * each[0])
+                    point2 = (7, rectHeight * each[0] + rectHeight)
+                    draw.rectangle([point1, point2], fill=each[1])
+                """
+                
+            
+                
+                poiBack.paste(avatar, (7, 3))
+                poiBack.paste(textBack, (7, 19))
+                
+                # add the POI id as a number
+                
+                # add the player head
+
+
+                #mask = imgTest.convert("L").point(lambda x: min(x, 100))
+                #imgAlpha = imgTest
+                #imgAlpha.putalpha(mask)
+                #imgBorder = PIL.Image.new("RGBA", (26, 10), "black")
+                #imgBorder.paste(imgTest, (1,1))
+
+                # add the POI to the output image
+
+                uuidnum = uuid + str(num)
+                
+                # save the base POI slightly scaled up for index.md
+                
+                poiBack.save(os.path.join(papyriOutputPath, uuidnum + ".png"), "png")
+
+                jsonForIndex = {"id": uuidnum, "x": x, "y": z, "placement": "TOP_LEFT", "checkResize": False}
+                if jsonForIndex not in poiOverlays:
+                    poiOverlays.append(jsonForIndex)
+
+                imgForIndex = '<img class="poiOverlay" id="{uuidnum}" src="../../{uuidnum}.png" alt="{title}">'.format(uuidnum=uuidnum, title=title)
+                if imgForIndex not in poiImages:
+                    poiImages.append(imgForIndex)
+
+
+    mapOutputPath = os.path.join(papyriOutputPath, "map", dimDict[d])
+    logging.info("Generating index.html file for {}".format(dimDict[d]))
+    # put aside some stuff for stuff                                            
+    tileSource = []
+    for bigMap in mapFileObjsByDim[d].items():
+        bigMapName = "{}.{}.{}".format(d, *bigMap[0][0])
+        x, y = bigMap[0][0] 
+
+
+        tileSource.append(dict(tileSource="{}.dzi".format(bigMapName), x=x,
+        y=y, width=canvasSize))
+
+    tileSources = "tileSources: " + json.dumps(tileSource, indent=2)          
+    overlays = "overlays: " + json.dumps(poiOverlays, indent=2)
+    index = indexTemplateTop + tileSources + ",\n" + overlays + indexTemplateBottom + "\n".join(poiImages)
+
+    with open(os.path.join(mapOutputPath, "index.html"), "+w", encoding="utf-8") as outFile:
+        outFile.write(index)
 if poi:
     # write the papyri.md file containing all the POI
     with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
