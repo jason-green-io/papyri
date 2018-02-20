@@ -117,7 +117,7 @@ body {
         //defaultZoomLevel: 64,
         //maxZoomLevel: 6,
         //minZoomLevel: 64,
-        maxZoomPixelRatio: 2,
+        maxZoomPixelRatio: 10,
         //minPixelRatio: 1.5,
         imediateRender: true,
         prefixUrl: "../../images/",
@@ -453,11 +453,11 @@ for d in dimDict:
         bigMapName = "{}.{}.{}".format(d, *bigMap[0][0])
 
         # create the large backgound iamge
-        background = PIL.Image.new('RGB', (canvasSize - (canvasSize // 64) * 2,
-        canvasSize - (canvasSize // 64) * 2), (204, 178,
-        132))
-        background = PIL.ImageOps.expand(background ,border=canvasSize // 64, fill=(124, 109,
-        82))
+        #background = PIL.Image.new('RGB', (canvasSize - (canvasSize // 64) * 2, canvasSize - (canvasSize // 64) * 2), (204, 178, 132))
+        #background = PIL.ImageOps.expand(background ,border=canvasSize // 64, fill=(124, 109, 82))
+
+        background = PIL.Image.open(os.path.join(cwd, "template", "itemframe.png"))
+        background = background.resize((canvasSize, canvasSize))
         p1 = Point(*bigMap[0][0])
         p2 = Point(*bigMap[0][1])
 
@@ -653,7 +653,7 @@ for d in dimDict:
                 if jsonForIndex not in poiOverlays:
                     poiOverlays.append(jsonForIndex)
 
-                imgForIndex = '<img class="poiOverlay" id="{uuidnum}" src="../../{uuidnum}.png" alt="{title}">'.format(uuidnum=uuidnum, title=title)
+                imgForIndex = '<img class="poiOverlay" id="{uuidnum}" src="../../{uuidnum}.png" title="{title}" alt="{title}">'.format(uuidnum=uuidnum, title=title)
                 if imgForIndex not in poiImages:
                     poiImages.append(imgForIndex)
 
