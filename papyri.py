@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+
+# This is Papyri, a Minecraft in-game map rendered
+# version 0.5
+# created by jason@green.io
+
+
 from pointsandrectangles import Point, Rect
 import sys
 import minecraftmap
@@ -73,7 +79,7 @@ canvasSize = 2 ** (8 + args.zoomlevel)
 viewerZoom = 1
 
 # Format for the structure of a link pointing to a specific location on the map 
-linkFormat = "map/#dim/overworld/{}/{}/" + str(viewerZoom)
+linkFormat = "map/{}/"
 
 # regular expression searching for coordinates
 poiRE = "(.*)\n([one]?) ?(-?\d+), ?(-?\d+)\n(.*)"
@@ -336,7 +342,7 @@ if poi:
                             color = "#ffffff"
 
                         # prepare a POI for writing
-                        POI = (uuid, title, x,z, linkFormat.format(viewerx,viewerz), desc, num, color, dim)
+                        POI = (uuid, title, x,z, linkFormat.format(dimDict[d]), desc, num, color, dim)
 
                         logging.info(POI)
 
