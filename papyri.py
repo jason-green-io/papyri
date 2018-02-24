@@ -92,7 +92,7 @@ dimDictShort = {"o": 0, "n": -1, "e": 1}
 
 # dimension value to name dict
 dimDict = {-1: "nether", 0: "overworld", 1: "end"}
-
+dimColors = {-1: "#3E1A19", 0: "#575757", 1: "#C2C688"}
 # Header for the tag tables in markdown
 tableHeader ="""
 
@@ -112,7 +112,7 @@ body {
   margin: 0;
 }
 </style>
-<div id="openseadragon1" style="background-color: #512717; margin: 0 auto; width: 100%; height: 100%;"></div>
+<div id="openseadragon1" style="background-color: replaceThisWithTheBackgroundColour; margin: 0 auto; width: 100%; height: 100%;"></div>
 <script src="../../openseadragon/openseadragon.min.js"></script>
 <script   src="https://code.jquery.com/jquery-3.3.1.min.js"   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="   crossorigin="anonymous"></script>
 <script type="text/javascript">
@@ -678,7 +678,7 @@ for d in dimDict:
 
     tileSources = "tileSources: " + json.dumps(tileSource, indent=2)          
 
-    index = indexTemplateTop + tileSources + ",\n"
+    index = indexTemplateTop.replace("replaceThisWithTheBackgroundColour", dimColour[d]) + tileSources + ",\n"
 
 
     if poi:
