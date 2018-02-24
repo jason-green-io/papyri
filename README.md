@@ -62,6 +62,17 @@ optional arguments:
 
 Once it's done, the contents of the output folder can be served as a website. It's completely static so it can but put in an S3 bucket a github project or hosted locally on your machine by running something like `python3 -m SimpleHTTPServer` inside the output folder.
 
+## POI instructions
+
+Step 1: Rename a book to `papyri`
+
+![screen shot 2018-02-24 at 2 58 09 pm](https://user-images.githubusercontent.com/2853489/36634498-7aebf294-1973-11e8-9fdb-088a5cff52c1.png)
+
+Step 2: Follow this template, one POI per page is recommended
+
+![screen shot 2018-02-24 at 2 56 57 pm](https://user-images.githubusercontent.com/2853489/36634496-77da3e08-1973-11e8-96d4-ecb045f68372.png)
+
+
 
 ## Credits
 
