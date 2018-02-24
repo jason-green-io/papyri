@@ -695,18 +695,18 @@ if poi:
     # write the papyri.md file containing all the POI
     with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
         poisFile.write("[POI instructions](https://github.com/jason-green-io/papyri/blob/master/README.md#poi-instructions)")
-            #poisFile.write("### Map stats\n")
-            #poisFile.write(mapStatsStr)
-            logging.info("Writing POI to papyri.md")
-            # iterate over each tag
-            for tag in sorted(taggedPois):
-                #write the header for the tag
-                poisFile.write("## [{}]".format(tag))
-                poisFile.write(tableHeader)
-
-                # iterate over all the POI in the tag
-                for poi in taggedPois[tag]:
-                    poisFile.write(poiFormat.format(*poi))
+        #poisFile.write("### Map stats\n")
+        #poisFile.write(mapStatsStr)
+        logging.info("Writing POI to papyri.md")
+        # iterate over each tag
+        for tag in sorted(taggedPois):
+            #write the header for the tag
+            poisFile.write("## [{}]".format(tag))
+            poisFile.write(tableHeader)
+            
+            # iterate over all the POI in the tag
+            for poi in taggedPois[tag]:
+                poisFile.write(poiFormat.format(*poi))
 
 
 
