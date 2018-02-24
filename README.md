@@ -8,6 +8,8 @@ Papyri is a Minecraft map item web presenter. It will show all maps created on a
 
 ![screen shot 2018-02-24 at 2 04 28 pm](https://user-images.githubusercontent.com/2853489/36633991-d83f2a9a-196b-11e8-94c7-44c57c4fb40e.png)
 
+![screen shot 2018-02-24 at 2 10 37 pm](https://user-images.githubusercontent.com/2853489/36634033-8f94dfaa-196c-11e8-88bd-fef75e7e0132.png)
+
 ## prerequisites
 
 python3 and pip (pip3) (Not tested in python2)
