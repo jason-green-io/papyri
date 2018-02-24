@@ -342,7 +342,7 @@ if poi:
                             color = "#ffffff"
 
                         # prepare a POI for writing
-                        POI = (uuid, title, x,z, linkFormat.format(dimDict[d]), desc, num, color, dim)
+                        POI = (uuid, title, x,z, linkFormat.format(dimDict[dim]), desc, num, color, dim)
 
                         logging.info(POI)
 
