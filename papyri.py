@@ -92,7 +92,7 @@ dimDictShort = {"o": 0, "n": -1, "e": 1}
 
 # dimension value to name dict
 dimDict = {-1: "nether", 0: "overworld", 1: "end"}
-dimColors = {-1: "#3E1A19", 0: "#575757", 1: "#C2C688"}
+dimColour = {-1: "#3E1A19", 0: "#575757", 1: "#C2C688"}
 # Header for the tag tables in markdown
 tableHeader ="""
 
