@@ -74,7 +74,7 @@ font = PIL.ImageFont.truetype(fontPath,8)
 scaleFactor = 1
 
 # this is how much of the map is rendered
-canvasSize = 2 ** (8 + args.zoomlevel)
+canvasSize = 2 ** (8 + int(args.zoomlevel))
 
 viewerZoom = 1
 
@@ -567,7 +567,7 @@ for d in dimDict:
                 background.save(f, format="png")
 
             logging.info("Converting png to deepzoom")
-            pyvips.Image.new_from_file(outPngFile, access='sequential').dzsave(os.path.join(mapOutputPath, bigMapName + ".dzi"), suffix=".png")
+            pyvips.Image.new_from_file(outPngFile, access='sequential').dzsave(os.path.join(mapOutputPath, bigMapName), suffix=".png")
 
 if mapstats:
     mapStats = {}
