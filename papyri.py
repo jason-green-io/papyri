@@ -456,7 +456,7 @@ for d in dimDict:
     # put aside some stuff for stuff
     for bigMap in bigMaps:
         
-        bigMapName = "{}.{}.{}".format(d, *bigMap[0][0])
+        bigMapName = "{}_{}_{}".format(d, *bigMap[0][0])
 
         # create the large backgound iamge
         #background = PIL.Image.new('RGB', (canvasSize - (canvasSize // 64) * 2, canvasSize - (canvasSize // 64) * 2), (204, 178, 132))
@@ -669,7 +669,7 @@ for d in dimDict:
     # put aside some stuff for stuff                                            
     tileSource = []
     for bigMap in mapFileObjsByDim[d].items():
-        bigMapName = "{}.{}.{}".format(d, *bigMap[0][0])
+        bigMapName = "{}_{}_{}".format(d, *bigMap[0][0])
         x, y = bigMap[0][0] 
 
 
