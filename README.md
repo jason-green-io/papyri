@@ -47,7 +47,9 @@ convert minecraft maps to the web
 
 optional arguments:
   -h, --help            show this help message and exit
-  --poi                 generate POI
+  --poi                 generate POI file, this outputs papyri.md that can be
+                        used with http://dynalon.github.io/mdwiki/#!index.md
+                        to show on the web
   --mcdata MCDATA       input path to minecraft server data
   --output OUTPUT       output path for web stuff
   --zoomlevel ZOOMLEVEL
@@ -57,7 +59,6 @@ optional arguments:
   --nostitch            disable generating the map, useful if you only want
                         the overlay displayed
   --mapstats            generate stats on map coverage of selected size
-
 ```
 
 Once it's done, the contents of the output folder can be served as a website. It's completely static so it can but put in an S3 bucket a github project or hosted locally on your machine by running something like `python3 -m SimpleHTTPServer` inside the output folder.
@@ -81,6 +82,8 @@ POI web front end by: http://dynalon.github.io/mdwiki/#!index.md
 
 Font provided by: http://www.04.jp.org
 
-DZI viewer provided by: https://github.com/davidmcclure/osd-dzi-viewer and https://openseadragon.github.io
+DZI viewer provided by: https://openseadragon.github.io
 
 minecraftmap map item framework by: https://github.com/spookymushroom/minecraftmap
+
+This project is licensed under the terms of the MIT license.
