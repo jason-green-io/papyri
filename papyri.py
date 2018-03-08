@@ -533,12 +533,13 @@ logging.info("Writing papyri.md")
 
 
 for d in dimDict:
-
+    poiOverlays = []
+    poiImages = []
 
     if poi:
         logging.info("Adding POIs to stiched map")
-        poiOverlays = []
-        poiImages = []
+
+        
         # iterate over the tags to add POI to map
         for tag in sorted(taggedPois):
             # iterate over POI in tag
@@ -610,43 +611,43 @@ for d in dimDict:
                 if imgForIndex not in poiImages:
                     poiImages.append(imgForIndex)
 
-        for banner in banners[d]:
-            color = banner["Color"]
-            x = banner["Pos"]["X"]
-            z = banner["Pos"]["Z"]
-            y = banner["Pos"]["Y"]
-            coords = "{} {} {}".format(str(x), str(y), str(z))
-            name = json.loads(banner.get("Name", '{}')).get("text", "")
-            overlayId = name + color + str(x) + str(z)
-            poiOverlays.append({"id": overlayId, "x": x, "y": z, "checkResize": False, "placement": "CENTER"})
+    for banner in banners[d]:
+        color = banner["Color"]
+        x = banner["Pos"]["X"]
+        z = banner["Pos"]["Z"]
+        y = banner["Pos"]["Y"]
+        coords = "{} {} {}".format(str(x), str(y), str(z))
+        name = json.loads(banner.get("Name", '{}')).get("text", "")
+        overlayId = name + color + str(x) + str(z)
+        poiOverlays.append({"id": overlayId, "x": x, "y": z, "checkResize": False, "placement": "CENTER"})
 
 
-            bannerImage = PIL.Image.open(os.path.join(templatePath, "{color}banner.png".format(color=color)))
-            bannerImage = bannerImage.resize((24, 32))
+        bannerImage = PIL.Image.open(os.path.join(templatePath, "{color}banner.png".format(color=color)))
+        bannerImage = bannerImage.resize((24, 32))
 
-            poiImage = PIL.Image.new("RGBA", (256, 64), (255, 255, 255, 0))
-            if name:
-                draw = PIL.ImageDraw.Draw(poiImage)            
-                w, h = draw.textsize(name, font=mcfont)
-                poiImage = poiImage.resize((w, 64))
-                draw = PIL.ImageDraw.Draw(poiImage)            
-                textX = 0
-                textY = 34
-                draw.rectangle((textX, textY, textX + w, textY + h), fill=(0, 0, 0, 192))
-                draw.text((textX, textY), name, font=mcfont, fill=(255, 255, 255, 255))
+        poiImage = PIL.Image.new("RGBA", (256, 64), (255, 255, 255, 0))
+        if name:
+            draw = PIL.ImageDraw.Draw(poiImage)            
+            w, h = draw.textsize(name, font=mcfont)
+            poiImage = poiImage.resize((w, 64))
+            draw = PIL.ImageDraw.Draw(poiImage)            
+            textX = 0
+            textY = 34
+            draw.rectangle((textX, textY, textX + w, textY + h), fill=(0, 0, 0, 192))
+            draw.text((textX, textY), name, font=mcfont, fill=(255, 255, 255, 255))
             
-                poiImage.paste(bannerImage, (w // 2 - 12, 0))
-            else:
-                poiImage = poiImage.resize((24, 64))
-                poiImage.paste(bannerImage, (0, 0))
+            poiImage.paste(bannerImage, (w // 2 - 12, 0))
+        else:
+            poiImage = poiImage.resize((24, 64))
+            poiImage.paste(bannerImage, (0, 0))
 
             
-            imageNameText = color + name
-            imageName = hashlib.md5(imageNameText.encode("utf-8")).hexdigest()            
-            poiImage.save(os.path.join(papyriOutputPath, imageName + ".png"))
+        imageNameText = color + name
+        imageName = hashlib.md5(imageNameText.encode("utf-8")).hexdigest()            
+        poiImage.save(os.path.join(papyriOutputPath, imageName + ".png"))
 
 
-            poiImages.append('<img class="poiOverlay" id="{overlayId}" src="../../{imageName}.png" title="{coords}" alt="{coords}">'.format(imageName=imageName, color=color, overlayId=overlayId, coords=coords))
+        poiImages.append('<img class="poiOverlay" id="{overlayId}" src="../../{imageName}.png" title="{coords}" alt="{coords}">'.format(imageName=imageName, color=color, overlayId=overlayId, coords=coords))
     
     mapOutputPath = os.path.join(papyriOutputPath, "map", dimDict[d])
     logging.info("Generating index.html file for {}".format(dimDict[d]))
@@ -665,13 +666,13 @@ for d in dimDict:
     index = indexTemplateTop.replace("replaceThisWithTheBackgroundColour", dimColour[d]) + tileSources + ",\n"
 
 
-    if poi:
-        index += "overlays: " + json.dumps(poiOverlays, indent=2)
+    
+    index += "overlays: " + json.dumps(poiOverlays, indent=2)
 
     index += indexTemplateBottom
 
-    if poi:
-        index += "\n".join(poiImages)
+    
+    index += "\n".join(poiImages)
 
     with open(os.path.join(mapOutputPath, "index.html"), "+w", encoding="utf-8") as outFile:
         outFile.write(index)
