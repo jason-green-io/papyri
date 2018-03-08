@@ -6,9 +6,7 @@ Papyri is a Minecraft map item web presenter. It will show all maps and banners 
 
 [Example 2 - various YouTuber server maps](http://jason.green.io/static)
 
-![screen shot 2018-02-24 at 2 04 28 pm](https://user-images.githubusercontent.com/2853489/36633991-d83f2a9a-196b-11e8-94c7-44c57c4fb40e.png)
-
-![screen shot 2018-02-24 at 2 10 37 pm](https://user-images.githubusercontent.com/2853489/36634033-8f94dfaa-196c-11e8-88bd-fef75e7e0132.png)
+![screen shot 2018-03-07 at 9 32 56 pm](https://user-images.githubusercontent.com/2853489/37129992-952c8bac-224f-11e8-95ce-21a59954409d.png)
 
 ## prerequisites
 
