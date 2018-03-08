@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # This is Papyri, a Minecraft in-game map rendered
-# version 0.5
+# version 0.6
 # created by jason@green.io
 
 
@@ -23,7 +23,9 @@ import argparse
 import logging
 import numpy
 import json
+import hashlib
 
+mcfont = PIL.ImageFont.truetype(minecraftmap.fontpath,8)
 
 # get the current running folder to find the font and template folders
 cwd = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +35,7 @@ parser = argparse.ArgumentParser(description='convert minecraft maps to the web'
 parser.add_argument('--poi', action='store_true', help="generate POI file, this outputs papyri.md that can be used with http://dynalon.github.io/mdwiki/#!index.md to show on the web")
 parser.add_argument('--mcdata', help="input path to minecraft server data", required=True)
 parser.add_argument('--output', help="output path for web stuff", required=True)
-parser.add_argument('--zoomlevel', help="size of maps generated in mc zoom levels, 8 = 65k, 7 = 32k", default=6)
+parser.add_argument('--zoomlevel', help="size of maps generated in mc zoom levels, 8 = 65k, 7 = 32k", choices=["5","6","7","8"], default=6)
 parser.add_argument("--overlay", help="add overlay showing map IDs",
 action='store_true')
 parser.add_argument("--nostitch", help=
@@ -123,7 +125,7 @@ body {
         //defaultZoomLevel: 64,
         //maxZoomLevel: 6,
         //minZoomLevel: 64,
-        maxZoomPixelRatio: 10,
+        maxZoomPixelRatio: 30,
         //minPixelRatio: 1.5,
         imediateRender: true,
         prefixUrl: "../../images/",
@@ -332,13 +334,16 @@ logging.info("Parsing map .dat files")
 
 
 bigMaps = set()
+banners = collections.defaultdict(list)
 
 # get all the map objects
 for mapFile in mapFiles:
     mapObj = minecraftmap.Map(mapFile,eco=False)
     mapFileObjs.append((os.path.basename(mapFile).split('.')[0], mapObj))
+    banners[mapObj.dimension].extend(mapObj.banners)
 
-
+print(banners)
+    
 # sort them by zoom level
 mapFileObjs.sort(key=lambda m: m[1].zoomlevel, reverse=True)
 
@@ -605,7 +610,39 @@ for d in dimDict:
                 if imgForIndex not in poiImages:
                     poiImages.append(imgForIndex)
 
+        for banner in banners[d]:
+            color = banner["Color"]
+            x = banner["Pos"]["X"]
+            z = banner["Pos"]["Z"]
+            name = json.loads(banner.get("Name", '{}')).get("text", "")
+            overlayId = name + color + str(x) + str(z)
+            poiOverlays.append({"id": overlayId, "x": x, "y": z, "checkResize": False, "placement": "CENTER"})
 
+
+            bannerImage = PIL.Image.open(os.path.join(templatePath, "{color}banner.png".format(color=color)))
+            bannerImage = bannerImage.resize((24, 32))
+
+            poiImage = PIL.Image.new("RGBA", (256, 64), (255, 255, 255, 0))
+            if name:
+                draw = PIL.ImageDraw.Draw(poiImage)            
+                w, h = draw.textsize(name, font=mcfont)
+
+                textX = 128 - w // 2
+                textY = 34
+                draw.rectangle((textX, textY, textX + w, textY + h), fill=(0, 0, 0, 192))
+                draw.text((textX, textY), name, font=mcfont, fill=(255, 255, 255, 255))
+            
+            poiImage.paste(bannerImage, (116, 0))
+
+
+            
+            imageNameText = color + name
+            imageName = hashlib.md5(imageNameText.encode("utf-8")).hexdigest()            
+            poiImage.save(os.path.join(papyriOutputPath, imageName + ".png"))
+
+
+            poiImages.append('<img class="poiOverlay" id="{overlayId}" src="../../{imageName}.png" title="{name}" alt="{name}">'.format(imageName=imageName, color=color, overlayId=overlayId, name=name))
+    
     mapOutputPath = os.path.join(papyriOutputPath, "map", dimDict[d])
     logging.info("Generating index.html file for {}".format(dimDict[d]))
     # put aside some stuff for stuff                                            
