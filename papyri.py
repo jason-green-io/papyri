@@ -21,7 +21,6 @@ import re
 import collections
 import argparse
 import logging
-import numpy
 import json
 import hashlib
 
