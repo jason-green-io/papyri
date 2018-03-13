@@ -514,7 +514,13 @@ for d in dimDict:
 
             logging.info("Converting png to deepzoom")
             pyvips.Image.new_from_file(outPngFile, access='sequential').dzsave(os.path.join(mapOutputPath, "temp"), suffix=".png")
+            if os.path.exists(os.path.join(mapOutputPath, bigMapName + ".dzi")):
+                shutil.rmtree(os.path.join(mapOutputPath, bigMapName + ".dzi"))
+                
             shutil.move(os.path.join(mapOutputPath, "temp.dzi"), os.path.join(mapOutputPath, bigMapName + ".dzi"))
+            if os.path.exists(os.path.join(mapOutputPath, bigMapName + "_files")):
+                shutil.rmtree(os.path.join(mapOutputPath, bigMapName + "_files"))
+                
             shutil.move(os.path.join(mapOutputPath, "temp_files"), os.path.join(mapOutputPath, bigMapName + "_files"))
                                      
 
