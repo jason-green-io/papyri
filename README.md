@@ -20,7 +20,7 @@ to do this on Mac OS X:
 
 Ubuntu should be:
 
-    apt-get install libvips glib2.0-dev
+    apt-get install libvips glib2.0-dev libffi-dev
 
 some python stuff you'll need:
 
