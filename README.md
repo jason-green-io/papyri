@@ -1,4 +1,4 @@
-# papyri version 0.6
+# papyri version 0.7
 
 Papyri is a Minecraft map item web presenter. It will show all maps and banners created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since Many maps can be created of the same area, Papyri will prioritize rendering so that maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
 
@@ -38,19 +38,24 @@ then, inside the new *minecraftmap* folder
 ## usage
 
 ```
-usage: papyri.py [-h] [--poi] --mcdata MCDATA --output OUTPUT
-                 [--zoomlevel ZOOMLEVEL] [--overlay] [--nostitch] [--mapstats]
+usage: papyri.py [-h] [--poi] [--banners] --mcdata MCDATA --output OUTPUT
+                 [--zoomlevel {5,6,7,8}] [--overlay] [--nostitch] [--mapstats]
 
 convert minecraft maps to the web
 
 optional arguments:
   -h, --help            show this help message and exit
-  --poi                 generate POI file, this outputs papyri.md that can be
-                        used with http://dynalon.github.io/mdwiki/#!index.md
-                        to show on the web
+  --poi                 generate POI file and show POI books, this outputs
+                        papyri.md that can be used with
+                        http://dynalon.github.io/mdwiki/#!index.md to show on
+                        the web
+  --banners             generate POI file and show banners, this outputs
+                        papyri.md that can be used with
+                        http://dynalon.github.io/mdwiki/#!index.md to show on
+                        the web
   --mcdata MCDATA       input path to minecraft server data
   --output OUTPUT       output path for web stuff
-  --zoomlevel ZOOMLEVEL
+  --zoomlevel {5,6,7,8}
                         size of maps generated in mc zoom levels, 8 = 65k, 7 =
                         32k
   --overlay             add overlay showing map IDs

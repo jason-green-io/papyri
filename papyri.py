@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # This is Papyri, a Minecraft in-game map rendered
-# version 0.6
+# version 0.7
 # created by jason@green.io
 
 
@@ -31,7 +31,8 @@ cwd = os.path.dirname(os.path.abspath(__file__))
 
 # setup the parser for command line options
 parser = argparse.ArgumentParser(description='convert minecraft maps to the web')
-parser.add_argument('--poi', action='store_true', help="generate POI file, this outputs papyri.md that can be used with http://dynalon.github.io/mdwiki/#!index.md to show on the web")
+parser.add_argument('--poi', action='store_true', help="generate POI file and show POI books, this outputs papyri.md that can be used with http://dynalon.github.io/mdwiki/#!index.md to show on the web")
+parser.add_argument('--banners', action='store_true', help="generate POI file and show banners, this outputs papyri.md that can be used with http://dynalon.github.io/mdwiki/#!index.md to show on the web")
 parser.add_argument('--mcdata', help="input path to minecraft server data", required=True)
 parser.add_argument('--output', help="output path for web stuff", required=True)
 parser.add_argument('--zoomlevel', help="size of maps generated in mc zoom levels, 8 = 65k, 7 = 32k", choices=["5","6","7","8"], default=6)
@@ -56,7 +57,8 @@ overlay = args.overlay
 nostitch = args.nostitch
 
 # Are we writing pois?
-poi = args.poi
+poiArg = args.poi
+bannerArg = args.banners
 
 # are we creating stats?
 mapstats = args.mapstats
@@ -102,7 +104,8 @@ tableHeader ="""
 """
 
 # row format for each POI in markdown
-poiFormat = "|![]({0}{6}.png)|**{1}**<br>[{2}, {3}, {6}]({4})<br>{5}|\n"
+poiFormat = "|![]({image})|**{title}**<br>[{dim}, {x}, {z}]({maplink})<br>{desc}|\n"
+mapLinkFormat = "map/{dim}/#zoom=0.02&x={x}&y={z}"
 
 poiMd = ""
 
@@ -115,7 +118,8 @@ body {
 </style>
 <div id="openseadragon1" style="background-color: replaceThisWithTheBackgroundColour; margin: 0 auto; width: 100%; height: 100%;"></div>
 <script src="../../openseadragon/openseadragon.min.js"></script>
-<script   src="https://code.jquery.com/jquery-3.3.1.min.js"   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="   crossorigin="anonymous"></script>
+<script src="../../openseadragon/openseadragon-bookmark-url.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="   crossorigin="anonymous"></script>
 <script type="text/javascript">
     var viewer = OpenSeadragon({
         id: "openseadragon1",
@@ -160,30 +164,31 @@ navImages: {
 """
 indexTemplateBottom = """
 
-});
-viewer.addHandler('open', () => {
-      let toggleOverlayButton = new OpenSeadragon.Button({
+    });
+
+    viewer.bookmarkUrl();
+
+    viewer.addHandler('open', () => {
+    let toggleOverlayButton = new OpenSeadragon.Button({
         tooltip: 'Toggle Overlays',
         srcRest: '../../images/poirest.png',
         srcGroup: '../../images/poi.png',
         srcHover: '../../images/poidown.png',
         srcDown: '../../images/poidown.png',
 
-      });
+    });
 
     viewer.addControl(toggleOverlayButton.element, { anchor: OpenSeadragon.ControlAnchor.TOP_LEFT });
     toggleOverlayButton.addHandler("click", function (data) {
     p_lays=document.getElementsByClassName("poioverlay");
     for(let i=0;i<p_lays.length;i++)p_lays[i].style.display==="none"?p_lays[i].style.display="block":p_lays[i].style.display="none";
-
-
     });
-    
-    });
+
+});
 </script>
 """
 
-if poi:
+if poiArg:
     # location of the player data files
     playerDatFilesPath = os.path.join(mcdata, "playerdata", "*.dat")
 
@@ -215,7 +220,7 @@ def unpack_nbt(tag):
 UUIDCounter = collections.Counter()
 
 # if we're outputting POI
-if poi:
+if poiArg:
 
     # iterate over all the player dat files
     for datFile in playerDatFiles:
@@ -246,8 +251,8 @@ if poi:
                         # get the stuff from the POI
                         title, dim, x, z, desc = each
 
-                        # set dim tim overworld if no dim was specified
-                        dim = 0 if not dim else dimDictShort[dim]
+                        # set dim to overworld if no dim was specified
+                        d = 0 if not dim else dimDictShort[dim]
 
                         # get rid of newlines in the description
                         desc = desc.replace("\n", " ")
@@ -284,8 +289,10 @@ if poi:
                         else:
                             color = "#ffffff"
 
+                        uuidnum = uuid + str(num)
+
                         # prepare a POI for writing
-                        POI = (uuid, title, x,z, linkFormat.format(dimDict[dim]), desc, num, color, dim)
+                        POI = {"num": num, "color": color, "uuid": uuid, "type": "book", "image": uuidnum + ".png", "title": title, "x": x, "z": z, "desc": desc, "d": d, "maplink": mapLinkFormat.format(x=x, z=z, dim=dimDict[d]), "dim": dimDict[d]}
 
                         logging.info(POI)
 
@@ -298,7 +305,6 @@ if poi:
                             taggedPois["none"].append(POI)
 
 
-    logging.info("Created %s tags", len(taggedPois))
 """
 # create the output folders if they don't exsist
 if not os.path.exists(papyriOutputPath):
@@ -341,7 +347,8 @@ for mapFile in mapFiles:
     mapFileObjs.append((os.path.basename(mapFile).split('.')[0], mapObj))
     banners[mapObj.dimension].extend(mapObj.banners)
 
-print(banners)
+
+logging.debug(banners)
     
 # sort them by zoom level
 mapFileObjs.sort(key=lambda m: m[1].zoomlevel, reverse=True)
@@ -385,7 +392,7 @@ for mapFileObj in mapFileObjs:
         if bigMap.overlaps(rect):
             mapFileObjsByDim[d][(btl,bbr)][name] = mapObj
             mapLabelsByDim[d][(btl,bbr)][(xc, zc, zoom)].add(name)
-print(mapLabelsByDim)
+logging.debug(mapLabelsByDim)
 
 # create the dimension output folder if they don't exsist
 for d in dimDict:
@@ -451,7 +458,7 @@ for d in dimDict:
             colorList = ["red", "green", "blue", "yellow", "purple"]
             draw = PIL.ImageDraw.Draw(background)
 
-            print(mapLabelsByDim[d][bigMap[0]])
+            logging.debug(mapLabelsByDim[d][bigMap[0]])
             for uniqMap in mapLabelsByDim[d][bigMap[0]].items():
 
                 ((xc, zc, zoom), names) = uniqMap
@@ -544,33 +551,32 @@ for d in dimDict:
     poiOverlays = []
     poiImages = []
 
-    if poi:
+    if poiArg:
         logging.info("Adding POIs to stiched map")
 
         
         # iterate over the tags to add POI to map
         for tag in sorted(taggedPois):
             # iterate over POI in tag
-            for poi in [p for p in taggedPois[tag] if p[8] == d]:
-                uuid, title, x, z, link, desc, num, color, dim = poi
+            for poi in [p for p in taggedPois[tag] if p["d"] == d and p["type"] == "book"]:
                 
                 logging.info(poi)
                 # get POI player head 
-                response = requests.get("https://mc-heads.net/avatar/{}/16".format(uuid))
+                response = requests.get("https://mc-heads.net/avatar/{}/16".format(poi["uuid"]))
                 avatar = PIL.Image.open(io.BytesIO(response.content))
 
-                rgbBack = tuple(int(color.lstrip('#')[i:i+2], 16) for i in (0, 2 ,4))
+                rgbBack = tuple(int(poi["color"].lstrip('#')[i:i+2], 16) for i in (0, 2 ,4))
 
                 textColor = "#000000" if (rgbBack[0] * 0.299 + rgbBack[1] * 0.587 + rgbBack[2] * 0.114) > 186 else "#ffffff"
                 
                 
                 poiBack = PIL.Image.open(os.path.join(cwd, "template", "bigbook.png"))
                 # object to draw on base POI
-                textBack = PIL.Image.new("RGBA", (8, 8), color)
+                textBack = PIL.Image.new("RGBA", (8, 8), poi["color"])
 
                 draw = PIL.ImageDraw.Draw(textBack)
-                w, h = draw.textsize(str(num), font=font)
-                draw.text((8 // 2 - w // 2 , 1), str(num), font=font, fill=textColor)
+                w, h = draw.textsize(str(poi["num"]), font=font)
+                draw.text((8 // 2 - w // 2 , 1), str(poi["num"]), font=font, fill=textColor)
                 textBack = textBack.resize((16, 16))
                 """
                 # get the number of colors in POI
@@ -605,57 +611,73 @@ for d in dimDict:
 
                 # add the POI to the output image
 
-                uuidnum = uuid + str(num)
+                
+                uuidnum = poi["uuid"] + str(poi["num"])
                 
                 # save the base POI slightly scaled up for index.md
                 
-                poiBack.save(os.path.join(papyriOutputPath, uuidnum + ".png"), "png")
+                poiBack.save(os.path.join(papyriOutputPath, poi["image"]), "png")
 
-                jsonForIndex = {"id": uuidnum, "x": x, "y": z, "placement": "TOP_LEFT", "checkResize": False}
+                jsonForIndex = {"id": uuidnum, "x": poi["x"], "y": poi["z"], "placement": "TOP_LEFT", "checkResize": False}
                 if jsonForIndex not in poiOverlays:
                     poiOverlays.append(jsonForIndex)
 
-                imgForIndex = '<img class="poiOverlay" id="{uuidnum}" src="../../{uuidnum}.png" title="{title}" alt="{title}">'.format(uuidnum=uuidnum, title=title)
+                imgForIndex = '<img class="poiOverlay" id="{uuidnum}" src="../../{uuidnum}.png" title="{title}" alt="{title}">'.format(uuidnum=uuidnum, title=poi["title"])
                 if imgForIndex not in poiImages:
                     poiImages.append(imgForIndex)
-
-    for banner in banners[d]:
-        color = banner["Color"]
-        x = banner["Pos"]["X"]
-        z = banner["Pos"]["Z"]
-        y = banner["Pos"]["Y"]
-        coords = "{} {} {}".format(str(x), str(y), str(z))
-        name = json.loads(banner.get("Name", '{}')).get("text", "")
-        overlayId = name + color + str(x) + str(z)
-        poiOverlays.append({"id": overlayId, "x": x, "y": z, "checkResize": False, "placement": "CENTER"})
-
-
-        bannerImage = PIL.Image.open(os.path.join(templatePath, "{color}banner.png".format(color=color)))
-        bannerImage = bannerImage.resize((24, 32))
-
-        poiImage = PIL.Image.new("RGBA", (256, 64), (255, 255, 255, 0))
-        if name:
-            draw = PIL.ImageDraw.Draw(poiImage)            
-            w, h = draw.textsize(name, font=mcfont)
-            poiImage = poiImage.resize((w, 64))
-            draw = PIL.ImageDraw.Draw(poiImage)            
-            textX = 0
-            textY = 34
-            draw.rectangle((textX, textY, textX + w, textY + h), fill=(0, 0, 0, 192))
-            draw.text((textX, textY), name, font=mcfont, fill=(255, 255, 255, 255))
+    if bannerArg:
+        for banner in banners[d]:
+            color = banner["Color"]
+            x = banner["Pos"]["X"]
+            z = banner["Pos"]["Z"]
+            y = banner["Pos"]["Y"]
+            coords = "{} {} {}".format(str(x), str(y), str(z))
+            name = json.loads(banner.get("Name", '{}')).get("text", "")
             
-            poiImage.paste(bannerImage, (w // 2 - 12, 0))
-        else:
-            poiImage = poiImage.resize((24, 64))
-            poiImage.paste(bannerImage, (0, 0))
+            tags = re.findall("\[(.*?)\]", name)
+             
+            POI = {"type": "banner", "title": "Banner", "x": x, "z": z, "desc": name, "image": color + "banner.png", "d": d, "dim": dimDict[d], "maplink": mapLinkFormat.format(x=x, z=z, dim=dimDict[d])}
 
+            logging.info(POI)
+
+            # if there's tags, append to the tag dict, otherwise, add to dict as untagged
+            if tags:
+
+                for tag in tags:
+                    taggedPois[tag].append(POI)
+            else:
+                taggedPois["none"].append(POI)
             
-        imageNameText = color + name
-        imageName = hashlib.md5(imageNameText.encode("utf-8")).hexdigest()            
-        poiImage.save(os.path.join(papyriOutputPath, imageName + ".png"))
+            overlayId = name + color + str(x) + str(z)
+            
+            poiOverlays.append({"id": overlayId, "x": x, "y": z, "checkResize": False, "placement": "CENTER"})
 
 
-        poiImages.append('<img class="poiOverlay" id="{overlayId}" src="../../{imageName}.png" title="{coords}" alt="{coords}">'.format(imageName=imageName, color=color, overlayId=overlayId, coords=coords))
+            bannerImage = PIL.Image.open(os.path.join(templatePath, "{color}banner.png".format(color=color)))
+
+            poiImage = PIL.Image.new("RGBA", (256, 64), (255, 255, 255, 0))
+            if name:
+                draw = PIL.ImageDraw.Draw(poiImage)            
+                w, h = draw.textsize(name, font=mcfont)
+                poiImage = poiImage.resize((w, 64))
+                draw = PIL.ImageDraw.Draw(poiImage)            
+                textX = 0
+                textY = 34
+                draw.rectangle((textX, textY, textX + w, textY + h), fill=(0, 0, 0, 160))
+                draw.text((textX, textY), name, font=mcfont, fill=(255, 255, 255, 255))
+                
+                poiImage.paste(bannerImage, (w // 2 - 12, 0))
+            else:
+                poiImage = poiImage.resize((24, 64))
+                poiImage.paste(bannerImage, (0, 0))
+
+                
+            imageNameText = color + name
+            imageName = hashlib.md5(imageNameText.encode("utf-8")).hexdigest()            
+            
+            poiImage.save(os.path.join(papyriOutputPath, imageName + ".png"))
+
+            poiImages.append('<img class="poiOverlay" id="{overlayId}" src="../../{imageName}.png" title="{coords}" alt="{coords}">'.format(imageName=imageName, color=color, overlayId=overlayId, coords=coords))
     
     mapOutputPath = os.path.join(papyriOutputPath, "map", dimDict[d])
     logging.info("Generating index.html file for {}".format(dimDict[d]))
@@ -684,7 +706,8 @@ for d in dimDict:
 
     with open(os.path.join(mapOutputPath, "index.html"), "+w", encoding="utf-8") as outFile:
         outFile.write(index)
-if poi:
+
+if poiArg:
     # write the papyri.md file containing all the POI
     with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
 
@@ -699,7 +722,7 @@ if poi:
             
             # iterate over all the POI in the tag
             for poi in taggedPois[tag]:
-                poisFile.write(poiFormat.format(*poi))
+                poisFile.write(poiFormat.format(**poi))
         poisFile.write("[POI instructions](https://github.com/jason-green-io/papyri/blob/master/README.md#poi-instructions)")
 
 
