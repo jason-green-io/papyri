@@ -264,7 +264,7 @@ if poiArg:
                         colors = re.findall(colorRE, desc)
 
                         # replace the tags with markdown links to the tag categories
-                        desc = re.subn("\[(.*?)\]", r"[\2](#\1)", desc)[0]
+                        desc = re.subn("\[(.*?)\]", r"[\1](#\1)", desc)[0]
 
                         # print(repr(desc))
 
@@ -636,7 +636,7 @@ for d in dimDict:
             
             tags = re.findall("\[(.*?)\]", name)
             
-            name = re.subn("\[(.*?)\]", r"[\2](#\1)", name)[0]
+            name = re.subn("\[(.*?)\]", r"[\1](#\1)", name)[0]
              
             POI = {"type": "banner", "title": "Banner", "x": x, "z": z, "desc": name, "image": color + "banner.png", "d": d, "dim": dimDict[d], "maplink": mapLinkFormat.format(x=x, z=z, dim=dimDict[d])}
 
