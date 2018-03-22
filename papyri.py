@@ -638,7 +638,7 @@ for d in dimDict:
             
             name = re.subn("\[(.*?)\]", r"[\1](#\1)", name)[0]
              
-            POI = {"type": "banner", "title": "Banner", "x": x, "z": z, "desc": name, "image": color + "banner.png", "d": d, "dim": dimDict[d], "maplink": mapLinkFormat.format(x=x, z=z, dim=dimDict[d])}
+            POI = {"type": "banner", "title": name, "x": x, "z": z, "desc": "", "image": color + "banner.png", "d": d, "dim": dimDict[d], "maplink": mapLinkFormat.format(x=x, z=z, dim=dimDict[d])}
 
             logging.info(POI)
 
