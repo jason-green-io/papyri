@@ -343,7 +343,7 @@ banners = collections.defaultdict(list)
 
 # get all the map objects
 for mapFile in mapFiles:
-    mapObj = minecraftmap.Map(mapFile,eco=False)
+    mapObj = minecraftmap.Map(mapFile,eco=True)
     mapFileObjs.append((os.path.basename(mapFile).split('.')[0], mapObj))
     banners[mapObj.dimension].extend(mapObj.banners)
 
@@ -436,21 +436,22 @@ for d in dimDict:
             z = zc - 128 * 2 ** m.zoomlevel // 2 * scaleFactor
 
             topLeft = Point(x,z) - p1
-
+            bottomRight = Point(x + 128 * 2 ** m.zoomlevel, z + 128 * 2 ** m.zoomlevel) - p1
 
             # skip if the center of the map isn't in the canvas
 
             if nostitch:
-                logging.info("Stitching map at %s, %s zoom level %s relative coords %s in %s",
-                x, z, zoom, topLeft, bigMapName)
+                logging.info("Stitching map at %s, %s zoom level %s relative coords %s, %s in %s",
+                x, z, zoom, topLeft, bottomRight, bigMapName)
 
                 # create an image from the .dat data
                 m.genimage()
 
                 # rescale the image base on the zoom level
-                m.rescale(num=scaleFactor)
+                mapScaled = m.im.resize((128 * 2 ** m.zoomlevel, 128 * 2 ** m.zoomlevel))
+                
 
-                background.paste(m.im, topLeft.as_tuple(), m.im)
+                background.paste(mapScaled, topLeft.as_tuple() + bottomRight.as_tuple(), mapScaled)
 
 
         if overlay:
