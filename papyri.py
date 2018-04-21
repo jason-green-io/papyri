@@ -710,7 +710,7 @@ for d in dimDict:
     with open(os.path.join(mapOutputPath, "index.html"), "+w", encoding="utf-8") as outFile:
         outFile.write(index)
 
-if poiArg:
+if poiArg or bannerArg:
     # write the papyri.md file containing all the POI
     with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
 
