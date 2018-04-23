@@ -549,7 +549,7 @@ logging.info("Writing papyri.md")
 
 
 for d in dimDict:
-    poiOverlays = []
+    poiOverlays = set()
     poiImages = []
 
     if poiArg:
