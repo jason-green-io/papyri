@@ -697,7 +697,7 @@ for d in dimDict:
 
     tileSources = "tileSources: " + json.dumps(tileSource, indent=2)          
     
-    poiOverlays = dict((v['id'],v) for v in poiOverlays).values()
+    poiOverlays = list(dict((v['id'],v) for v in poiOverlays).values())
 
     index = indexTemplateTop.replace("replaceThisWithTheBackgroundColour", dimColour[d]) + tileSources + ",\n"
 
