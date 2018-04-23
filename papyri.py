@@ -549,7 +549,7 @@ logging.info("Writing papyri.md")
 
 
 for d in dimDict:
-    poiOverlays = set()
+    poiOverlays = []
     poiImages = []
 
     if poiArg:
@@ -651,8 +651,9 @@ for d in dimDict:
             else:
                 taggedPois["none"].append(POI)
             
-            overlayId = name + color + str(x) + str(z)
-            
+            overlayIdText = name + color + str(x) + str(z)
+            overlayId = hashlib.md5(overlayIdText.encode("utf-8")).hexdigest()
+
             poiOverlays.append({"id": overlayId, "x": x, "y": z, "checkResize": False, "placement": "CENTER"})
 
 
@@ -695,6 +696,8 @@ for d in dimDict:
         y=y, width=canvasSize))
 
     tileSources = "tileSources: " + json.dumps(tileSource, indent=2)          
+    
+    poiOverlays = dict((v['id'],v) for v in poiOverlays).values()
 
     index = indexTemplateTop.replace("replaceThisWithTheBackgroundColour", dimColour[d]) + tileSources + ",\n"
 
