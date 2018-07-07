@@ -344,7 +344,8 @@ banners = collections.defaultdict(list)
 # get all the map objects
 for mapFile in mapFiles:
     mapObj = minecraftmap.Map(mapFile,eco=True)
-    mapFileObjs.append((os.path.basename(mapFile).split('.')[0], mapObj))
+    if not mapObj.unlimitedTracking:
+        mapFileObjs.append((os.path.basename(mapFile).split('.')[0], mapObj))
     banners[mapObj.dimension].extend(mapObj.banners)
 
 
