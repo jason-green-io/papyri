@@ -45,10 +45,6 @@ convert minecraft maps to the web
 
 optional arguments:
   -h, --help            show this help message and exit
-  --poi                 generate POI file and show POI books, this outputs
-                        papyri.md that can be used with
-                        http://dynalon.github.io/mdwiki/#!index.md to show on
-                        the web
   --banners             generate POI file and show banners, this outputs
                         papyri.md that can be used with
                         http://dynalon.github.io/mdwiki/#!index.md to show on
@@ -61,22 +57,9 @@ optional arguments:
   --overlay             add overlay showing map IDs
   --nostitch            disable generating the map, useful if you only want
                         the overlay displayed
-  --mapstats            generate stats on map coverage of selected size
 ```
 
 Once it's done, the contents of the output folder can be served as a website. It's completely static so it can but put in an S3 bucket a github project or hosted locally on your machine by running something like `python3 -m SimpleHTTPServer` inside the output folder.
-
-## POI instructions
-
-Step 1: Rename a book to `papyri`
-
-![anvil](https://user-images.githubusercontent.com/2853489/36634498-7aebf294-1973-11e8-9fdb-088a5cff52c1.png)
-
-Step 2: Follow this template, one POI per page is recommended
-
-![book page](https://user-images.githubusercontent.com/2853489/36634615-228a5364-1975-11e8-9566-72969bb1026e.png)
-
-
 
 ## Credits
 

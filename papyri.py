@@ -198,7 +198,7 @@ if poiArg:
     logging.info("Found %s player(s)", len(playerDatFiles))
 
 # empty defaultdict for all the tags
-taggedPois = collections.defaultdict(list)
+bannerJson = []
 
 # empty list of all maps coords for links to maps
 
@@ -219,6 +219,7 @@ def unpack_nbt(tag):
 # counter for generating the POI indexes
 UUIDCounter = collections.Counter()
 
+'''
 # if we're outputting POI
 if poiArg:
 
@@ -304,7 +305,7 @@ if poiArg:
                         else:
                             taggedPois["none"].append(POI)
 
-
+'''
 """
 # create the output folders if they don't exsist
 if not os.path.exists(papyriOutputPath):
@@ -552,7 +553,7 @@ logging.info("Writing papyri.md")
 for d in dimDict:
     poiOverlays = []
     poiImages = []
-
+    '''
     if poiArg:
         logging.info("Adding POIs to stiched map")
 
@@ -627,6 +628,7 @@ for d in dimDict:
                 imgForIndex = '<img class="poiOverlay" id="{uuidnum}" src="../../{uuidnum}.png" title="{title}" alt="{title}">'.format(uuidnum=uuidnum, title=poi["title"])
                 if imgForIndex not in poiImages:
                     poiImages.append(imgForIndex)
+    '''
     if bannerArg:
         for banner in banners[d]:
             color = banner["Color"]
@@ -636,22 +638,25 @@ for d in dimDict:
             coords = "{} {} {}".format(str(x), str(y), str(z))
             name = json.loads(banner.get("Name", '{}')).get("text", "")
             
-            tags = re.findall("\[(.*?)\]", name)
+            #tags = re.findall("\[(.*?)\]", name)
             
             name = re.subn("\[(.*?)\]", r"[\1](#\1)", name)[0]
              
-            POI = {"type": "banner", "title": name, "x": x, "z": z, "desc": "", "image": color + "banner.png", "d": d, "dim": dimDict[d], "maplink": mapLinkFormat.format(x=x, z=z, dim=dimDict[d])}
+            POI = {"title": name, "x": x, "z": z, "color": color, "d": d, "dim": dimDict[d], "maplink": mapLinkFormat.format(x=x, z=z, dim=dimDict[d])}
 
             logging.info(POI)
 
             # if there's tags, append to the tag dict, otherwise, add to dict as untagged
+            '''
             if tags:
 
                 for tag in tags:
                     taggedPois[tag].append(POI)
             else:
                 taggedPois["none"].append(POI)
-            
+            '''
+            bannerJson.append(POI)
+
             overlayIdText = name + color + str(x) + str(z)
             overlayId = hashlib.md5(overlayIdText.encode("utf-8")).hexdigest()
 
@@ -714,24 +719,13 @@ for d in dimDict:
     with open(os.path.join(mapOutputPath, "index.html"), "+w", encoding="utf-8") as outFile:
         outFile.write(index)
 
-if poiArg or bannerArg:
+if bannerArg:
     # write the papyri.md file containing all the POI
-    with open(os.path.join(papyriOutputPath, "papyri.md"), "w", encoding="utf-8") as poisFile:
+    with open(os.path.join(papyriOutputPath, "papyri.json"), "w", encoding="utf-8") as poisFile:
 
-        #poisFile.write("### Map stats\n")
-        #poisFile.write(mapStatsStr)
-        logging.info("Writing POI to papyri.md")
-        # iterate over each tag
-        for tag in sorted(taggedPois):
-            #write the header for the tag
-            poisFile.write("## [{}]".format(tag))
-            poisFile.write(tableHeader)
-            
-            # iterate over all the POI in the tag
-            for poi in taggedPois[tag]:
-                poisFile.write(poiFormat.format(**poi))
-        poisFile.write("[POI instructions](https://github.com/jason-green-io/papyri/blob/master/README.md#poi-instructions)")
-
+        logging.info("Writing POI to papyri.json")
+        print(bannerJson)
+        json.dump(bannerJson, poisFile)
 
 
 
