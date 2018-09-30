@@ -670,17 +670,17 @@ for d in dimDict:
             if name:
                 draw = PIL.ImageDraw.Draw(poiImage)            
                 w, h = draw.textsize(name, font=mcfont)
-                poiImage = poiImage.resize((w, 64))
+                #poiImage = poiImage.resize((w, 64))
                 draw = PIL.ImageDraw.Draw(poiImage)            
-                textX = 0
+                textX = 127 - (w // 2)
                 textY = 34
                 draw.rectangle((textX, textY, textX + w, textY + h), fill=(0, 0, 0, 160))
                 draw.text((textX, textY), name, font=mcfont, fill=(255, 255, 255, 255))
                 
-                poiImage.paste(bannerImage, (w // 2 - 12, 0))
+                poiImage.paste(bannerImage, (127 - 12, 0))
             else:
-                poiImage = poiImage.resize((24, 64))
-                poiImage.paste(bannerImage, (0, 0))
+                #poiImage = poiImage.resize((24, 64))
+                poiImage.paste(bannerImage, (127 - 12, 0))
 
                 
             imageNameText = color + name
@@ -688,7 +688,7 @@ for d in dimDict:
             
             poiImage.save(os.path.join(papyriOutputPath, imageName + ".png"))
 
-            poiImages.add('<img class="poiOverlay" id="{overlayId}" src="../../{imageName}.png" title="{coords}" alt="{coords}">'.format(imageName=imageName, color=color, overlayId=overlayId, coords=coords))
+            poiImages.add('<img class="poiOverlay" height="64" width="256" id="{overlayId}" src="../../{imageName}.png" title="{coords}" alt="{coords}">'.format(imageName=imageName, color=color, overlayId=overlayId, coords=coords))
     
     mapOutputPath = os.path.join(papyriOutputPath, "map", dimDict[d])
     logging.info("Generating index.html file for {}".format(dimDict[d]))
