@@ -35,7 +35,7 @@ parser.add_argument('--poi', action='store_true', help="generate POI file and sh
 parser.add_argument('--banners', action='store_true', help="generate POI file and show banners, this outputs papyri.md that can be used with http://dynalon.github.io/mdwiki/#!index.md to show on the web")
 parser.add_argument('--mcdata', help="input path to minecraft server data", required=True)
 parser.add_argument('--output', help="output path for web stuff", required=True)
-parser.add_argument('--zoomlevel', help="size of maps generated in mc zoom levels, 8 = 65k, 7 = 32k", choices=["5","6","7","8"], default=6)
+parser.add_argument('--zoomlevel', help="size of maps generated in mc zoom levels, 8 = 65k, 7 = 32k", choices=["4", "5","6","7","8"], default=5)
 parser.add_argument("--overlay", help="add overlay showing map IDs",
 action='store_true')
 parser.add_argument("--nostitch", help=
