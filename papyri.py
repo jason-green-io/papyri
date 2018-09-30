@@ -551,8 +551,9 @@ logging.info("Writing papyri.md")
 
 
 for d in dimDict:
-    poiOverlays = []
-    poiImages = []
+    poiOverlay = collections.namedtuple("poiOverlay", ["id", "x", "y", "checkResize", "placement"])
+    poiOverlays = set()
+    poiImages = set()
     '''
     if poiArg:
         logging.info("Adding POIs to stiched map")
@@ -660,7 +661,7 @@ for d in dimDict:
             overlayIdText = name + color + str(x) + str(z)
             overlayId = hashlib.md5(overlayIdText.encode("utf-8")).hexdigest()
 
-            poiOverlays.append({"id": overlayId, "x": x, "y": z, "checkResize": False, "placement": "CENTER"})
+            poiOverlays.add(poiOverlay(overlayId, x, z, False, "CENTER"))
 
 
             bannerImage = PIL.Image.open(os.path.join(templatePath, "{color}banner.png".format(color=color)))
@@ -687,7 +688,7 @@ for d in dimDict:
             
             poiImage.save(os.path.join(papyriOutputPath, imageName + ".png"))
 
-            poiImages.append('<img class="poiOverlay" id="{overlayId}" src="../../{imageName}.png" title="{coords}" alt="{coords}">'.format(imageName=imageName, color=color, overlayId=overlayId, coords=coords))
+            poiImages.add('<img class="poiOverlay" id="{overlayId}" src="../../{imageName}.png" title="{coords}" alt="{coords}">'.format(imageName=imageName, color=color, overlayId=overlayId, coords=coords))
     
     mapOutputPath = os.path.join(papyriOutputPath, "map", dimDict[d])
     logging.info("Generating index.html file for {}".format(dimDict[d]))
@@ -703,7 +704,7 @@ for d in dimDict:
 
     tileSources = "tileSources: " + json.dumps(tileSource, indent=2)          
     
-    poiOverlays = list(dict((v['id'],v) for v in poiOverlays).values())
+    poiOverlays = list(dict((v.id, v._asdict()) for v in poiOverlays).values())
 
     index = indexTemplateTop.replace("replaceThisWithTheBackgroundColour", dimColour[d]) + tileSources + ",\n"
 
@@ -724,7 +725,6 @@ if bannerArg:
     with open(os.path.join(papyriOutputPath, "papyri.json"), "w", encoding="utf-8") as poisFile:
 
         logging.info("Writing POI to papyri.json")
-        print(bannerJson)
         json.dump(bannerJson, poisFile)
 
 
