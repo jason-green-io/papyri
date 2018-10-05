@@ -39,19 +39,24 @@ then, inside the new *minecraftmap* folder
 
 ```
 usage: papyri.py [-h] [--poi] [--banners] --mcdata MCDATA --output OUTPUT
-                 [--zoomlevel {5,6,7,8}] [--overlay] [--nostitch] [--mapstats]
+                 [--zoomlevel {4,5,6,7,8}] [--overlay] [--nostitch]
+                 [--mapstats]
 
 convert minecraft maps to the web
 
 optional arguments:
   -h, --help            show this help message and exit
+  --poi                 generate POI file and show POI books, this outputs
+                        papyri.md that can be used with
+                        http://dynalon.github.io/mdwiki/#!index.md to show on
+                        the web
   --banners             generate POI file and show banners, this outputs
                         papyri.md that can be used with
                         http://dynalon.github.io/mdwiki/#!index.md to show on
                         the web
   --mcdata MCDATA       input path to minecraft server data
   --output OUTPUT       output path for web stuff
-  --zoomlevel {5,6,7,8}
+  --zoomlevel {4,5,6,7,8}
                         size of maps generated in mc zoom levels, 8 = 65k, 7 =
                         32k
   --overlay             add overlay showing map IDs
