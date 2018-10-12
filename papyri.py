@@ -189,8 +189,14 @@ indexTemplateBottom = """
 
         var webPoint = info.position;
         var viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+        var chunkX = parseInt(viewportPoint.x) >> 4;
+        var chunkZ = parseInt(viewportPoint.y) >> 4;
+        var regionX = chunkX >> 5;
+        var regionZ = chunkZ >> 5;
 
-        coordsEl.innerHTML = "XZ: " + viewportPoint.x.toFixed(3).toString() + " / " + viewportPoint.y.toFixed(3).toString();
+        coordsEl.innerHTML = "XZ: " + viewportPoint.x.toFixed(3).toString() + " / " + viewportPoint.y.toFixed(3).toString() + "<br/>" +
+                             "Chunk: " + chunkX + " " + chunkZ + "<br/>" +
+                             "r." + regionX + "." + regionZ + ".mca";
 
     });
 
