@@ -338,7 +338,11 @@ mapsInputGlob = os.path.join(mcdata, "data", "map*.dat")
 # get all the maps
 mapFiles = glob.glob(mapsInputGlob)
 
+def sortByInt(name):
+    return int(os.path.basename(name).strip("map_").strip(".dat"))
+
 # sort the maps by modified time
+mapFiles.sort(key=sortByInt)
 mapFiles.sort(key=os.path.getmtime)
 
 logging.info("Found %s maps", len(mapFiles))
