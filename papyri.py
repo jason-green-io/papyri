@@ -24,7 +24,7 @@ import logging
 import json
 import hashlib
 
-mcfont = PIL.ImageFont.truetype(minecraftmap.fontpath,8)
+#mcfont = PIL.ImageFont.truetype(minecraftmap.fontpath,8)
 
 # get the current running folder to find the font and template folders
 cwd = os.path.dirname(os.path.abspath(__file__))
@@ -34,17 +34,17 @@ parser = argparse.ArgumentParser(description='convert minecraft maps to the web'
 parser.add_argument('--poi', action='store_true', help="enable POI and generate POI file")
 parser.add_argument('--banners', action='store_true', help="generate POI file and show banners")
 parser.add_argument('--mcdata', help="input path to minecraft server data", required=True)
+parser.add_argument('--includeunlimitedtracking', help="include maps that have unlimited tracking on, this includes older maps from previous Minecraft versions and treasure maps in +1.13", action="store_true")
 parser.add_argument('--output', help="output path for web stuff", required=True)
 parser.add_argument('--zoomlevel', help="size of maps generated in mc zoom levels, 8 = 65k, 7 = 32k", choices=["4", "5", "6", "7", "8"], default=5)
 parser.add_argument("--overlay", help="add overlay showing map IDs",
 action='store_true')
 parser.add_argument("--nostitch", help=
 "disable generating the map, useful if you only want the overlay displayed", action="store_false")
-parser.add_argument("--mapstats", help="generate stats on map coverage of selected size", action="store_true")
 
 
 # Setup the logger
-logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 
 # get the args
 args = parser.parse_args()
@@ -60,9 +60,6 @@ nostitch = args.nostitch
 poiArg = args.poi
 bannerArg = args.banners
 
-# are we creating stats?
-mapstats = args.mapstats
-
 # Set the input minecraft world folder
 mcdata = args.mcdata
 
@@ -70,7 +67,7 @@ mcdata = args.mcdata
 papyriOutputPath = args.output
 
 # This is the font
-fontPath = os.path.join(cwd, "04B_03B_.TTF")
+fontPath = os.path.join(cwd, "template/mcfont/font/minecraft_font.ttf")
 font = PIL.ImageFont.truetype(fontPath,8)
 
 # scale factor
@@ -116,11 +113,14 @@ body {
   margin: 0;
 }
 </style>
+<link rel="stylesheet" type="text/css" media="screen" href="../../mcfont/css/minecraft-webfont.css" />
 <div id="openseadragon1" style="background-color: replaceThisWithTheBackgroundColour; margin: 0 auto; width: 100%; height: 100%;"></div>
+<div class="coords mc-white" style="position: absolute; bottom: 0px; left: 0px; font-family: Minecraft"></div>
 <script src="../../openseadragon/openseadragon.min.js"></script>
 <script src="../../openseadragon/openseadragon-bookmark-url.js"></script>
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="   crossorigin="anonymous"></script>
 <script type="text/javascript">
+    var coordsEl = document.querySelectorAll('.coords')[0];
     var viewer = OpenSeadragon({
         id: "openseadragon1",
         showNavigator: true,
@@ -132,6 +132,7 @@ body {
         //minPixelRatio: 1.5,
         imediateRender: true,
         prefixUrl: "../../images/",
+        gestureSettingsMouse: {clickToZoom: false},
 navImages: {
     zoomIn: {
     REST: 'zoominrest.png',
@@ -182,6 +183,15 @@ indexTemplateBottom = """
     toggleOverlayButton.addHandler("click", function (data) {
     p_lays=document.getElementsByClassName("poioverlay");
     for(let i=0;i<p_lays.length;i++)p_lays[i].style.display==="none"?p_lays[i].style.display="block":p_lays[i].style.display="none";
+    });
+
+   viewer.addHandler('canvas-click', function(info) {
+
+        var webPoint = info.position;
+        var viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+
+        coordsEl.innerHTML = "XZ: " + viewportPoint.x.toFixed(3).toString() + " / " + viewportPoint.y.toFixed(3).toString();
+
     });
 
 });
@@ -345,8 +355,11 @@ banners = collections.defaultdict(list)
 # get all the map objects
 for mapFile in mapFiles:
     mapObj = minecraftmap.Map(mapFile,eco=True)
-    if not mapObj.unlimitedTracking:
+    if args.includeunlimitedtracking:
         mapFileObjs.append((os.path.basename(mapFile).split('.')[0], mapObj))
+    else:
+        if not mapObj.unlimitedTracking:
+            mapFileObjs.append((os.path.basename(mapFile).split('.')[0], mapObj))
     banners[mapObj.dimension].extend(mapObj.banners)
 
 
@@ -534,18 +547,6 @@ for d in dimDict:
             shutil.move(os.path.join(mapOutputPath, "temp_files"), os.path.join(mapOutputPath, bigMapName + "_files"))
                                      
 
-if mapstats:
-    mapStats = {}
-
-    '''
-    # Creating map statistics
-    for d in dimDict:
-        mapStats.update([(d, len([a for a in background[d].getdata() if a[3] != 0]) / len(background[d].getdata()) * 100 )])
-
-
-    mapStatsStr = ", ".join([dimDict[d] + " " + str(s) + "%" for d, s in mapStats.items()]) + "\n\n"
-    '''
-
 logging.info("Writing papyri.md")
 
 
@@ -669,13 +670,13 @@ for d in dimDict:
             poiImage = PIL.Image.new("RGBA", (256, 64), (255, 255, 255, 0))
             if name:
                 draw = PIL.ImageDraw.Draw(poiImage)            
-                w, h = draw.textsize(name, font=mcfont)
+                w, h = draw.textsize(name, font=font)
                 #poiImage = poiImage.resize((w, 64))
                 draw = PIL.ImageDraw.Draw(poiImage)            
                 textX = 127 - (w // 2)
                 textY = 34
                 draw.rectangle((textX, textY, textX + w, textY + h), fill=(0, 0, 0, 160))
-                draw.text((textX, textY), name, font=mcfont, fill=(255, 255, 255, 255))
+                draw.text((textX, textY), name, font=font, fill=(255, 255, 255, 255))
                 
                 poiImage.paste(bannerImage, (127 - 12, 0))
             else:
