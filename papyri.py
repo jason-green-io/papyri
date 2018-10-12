@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 # This is Papyri, a Minecraft in-game map rendered
-# version 0.7
-# created by jason@green.io
+__version__ = "0.8.3"
+__author__ = "jason@green.io"
 
 
 from pointsandrectangles import Point, Rect
