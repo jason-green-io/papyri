@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # This is Papyri, a Minecraft in-game map rendered
-__version__ = "0.8.3"
+__version__ = "0.8.4"
 __author__ = "jason@green.io"
 
 
@@ -166,11 +166,15 @@ navImages: {
 indexTemplateBottom = """
 
     });
-    viewer.drawer.context.imageSmoothingEnabled = false;
+
+    viewer.addHandler('update-viewport', () => 
+       viewer.drawer.context.imageSmoothingEnabled = false;
+    });
+
     viewer.bookmarkUrl();
 
     viewer.addHandler('open', () => {
-    let toggleOverlayButton = new OpenSeadragon.Button({
+        let toggleOverlayButton = new OpenSeadragon.Button({
         tooltip: 'Toggle Overlays',
         srcRest: '../../images/poirest.png',
         srcGroup: '../../images/poi.png',
@@ -180,12 +184,13 @@ indexTemplateBottom = """
     });
 
     viewer.addControl(toggleOverlayButton.element, { anchor: OpenSeadragon.ControlAnchor.TOP_LEFT });
+    
     toggleOverlayButton.addHandler("click", function (data) {
-    p_lays=document.getElementsByClassName("poioverlay");
-    for(let i=0;i<p_lays.length;i++)p_lays[i].style.display==="none"?p_lays[i].style.display="block":p_lays[i].style.display="none";
+        p_lays=document.getElementsByClassName("poioverlay");
+        for(let i=0;i<p_lays.length;i++)p_lays[i].style.display==="none"?p_lays[i].style.display="block":p_lays[i].style.display="none";
     });
 
-   viewer.addHandler('canvas-click', function(info) {
+    viewer.addHandler('canvas-click', function(info) {
 
         var webPoint = info.position;
         var viewportPoint = viewer.viewport.pointFromPixel(webPoint);
