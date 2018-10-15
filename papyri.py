@@ -166,7 +166,7 @@ navImages: {
 indexTemplateBottom = """
 
     });
-
+    viewer.drawer.context.imageSmoothingEnabled = false;
     viewer.bookmarkUrl();
 
     viewer.addHandler('open', () => {
