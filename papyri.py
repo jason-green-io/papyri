@@ -167,7 +167,7 @@ indexTemplateBottom = """
 
     });
 
-    viewer.addHandler('update-viewport', () => 
+    viewer.addHandler('update-viewport', () => {
        viewer.drawer.context.imageSmoothingEnabled = false;
     });
 
