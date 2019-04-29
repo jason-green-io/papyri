@@ -24,7 +24,7 @@ Ubuntu should be:
 
 some python stuff you'll need:
 
-    pip3 install nbt Pillow requests pyvips
+    pip3 install nbt Pillow requests pyvips Jinja2
 
 and you'll need *minecraftmap*; I've put in a pull request for the official one to fix maps in 1.12, I'm hoping to just pull this from pypi eventaully, but for now use this fork:
 
