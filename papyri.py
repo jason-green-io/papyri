@@ -248,8 +248,8 @@ def mergeToLevel4(mapPngFolder, outputFolder):
         d = dim[0]
         for coords in tqdm(dim[1].items(), "level 4 of dim: {}".format(d)):
             c = coords[0]
-            coords[1].sort(key=operator.itemgetter(2))
             coords[1].sort(key=operator.itemgetter(1))
+            coords[1].sort(key=operator.itemgetter(2))
             coords[1].sort(key=operator.itemgetter(5), reverse=True)
             level4MapPng = Image.new("RGBA", (2048, 2048))
             for mapTuple in coords[1]:
