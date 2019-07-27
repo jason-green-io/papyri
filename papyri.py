@@ -7,7 +7,7 @@ import bedrock.leveldb as leveldb
 from PIL import ImageFont, Image, ImageDraw
 import math
 import operator
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from tqdm import tqdm
 import argparse
 import gzip
@@ -17,12 +17,16 @@ import re
 import jinja2
 from io import BytesIO
 import sys
+import hashlib
+import time
+
 
 fontPath = "./template/unifont-12.0.01.ttf"
 font = ImageFont.truetype(fontPath, 16)
 mapLinkFormat = "map/{d}/#zoom=0.02&x={x}&y={z}"
 
-filenameFormat = "map_{mapId}_{epoch}_{dim}_{x}_{z}_{scale}.png"
+filenameFormat = "map_{mapId}_{mapHash}_{epoch}_{dim}_{x}_{z}_{scale}.png"
+now = time.time()
 
 multipliers = [180, 220, 255, 135]
 
@@ -98,9 +102,32 @@ allColors = [multiplyColor(color, multiplier)
              for color in basecolors for multiplier in multipliers]
 
 
+def getidHashes(outputFolder):
+    mapPngs = glob.glob(os.path.join(outputFolder, "map_*_*_*_*_*_*_*.png"))
+    idHashEpochs = []
+    idHashes = OrderedDict()
+
+    for filename in mapPngs:
+        filename = filename.split("/")[-1].split("_")
+        mapId = filename[1]
+        mapHash = filename[2]
+        epoch = filename[3]
+        idHashEpochs.append((mapId, mapHash, epoch))
+
+    idHashEpochs.sort(key=operator.itemgetter(2))
+    [print(a) for a in idHashEpochs]
+    for idHashEpoch in idHashEpochs:
+        idHashes[idHashEpoch[0]] = idHashEpoch[1]
+    [print(a) for a in idHashes.items()]
+    return idHashes
+
 def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
 
     os.makedirs(outputFolder, exist_ok=True)
+
+    idHashes = getidHashes(outputFolder)
+
+
     db = leveldb.open(os.path.join(worldFolder, "db"))
     for a in tqdm(leveldb.iterate(db)):
         key = bytearray(a[0])
@@ -115,9 +142,9 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
 
             if mapUnlimitedTracking and not unlimitedTracking:
                 continue
-            mapId = mapNbt["mapId"].value % (2 ** 16)
-            mapTime = 0
+            mapId = mapNbt["mapId"].value
             mapScale = mapNbt["scale"].value
+            mapTime = now
             mapX = mapNbt["xCenter"].value
             mapZ = mapNbt["zCenter"].value
             mapDim = mapNbt["dimension"].value
@@ -145,23 +172,29 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
             mapImage = Image.frombytes("RGBA", (128, 128),
                                        bytes([x % 256 for x in mapColors]),
                                        'raw')
+            imageHash = hashlib.md5(mapImage.tobytes()).hexdigest()
 
-            mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2)
-            # print(mapImage.size)
-            filename = filenameFormat.format(mapId=mapId,
-                                             epoch=mapTime,
-                                             scale=mapScale,
-                                             x=mapX,
-                                             z=mapZ,
-                                             dim=mapDim)
+            if (str(mapId), imageHash) not in idHashes.items() and imageHash != "fcd6bcb56c1689fcef28b57c22475bad":
+                filename = filenameFormat.format(mapId=mapId,
+                                                 mapHash=imageHash,
+                                                 epoch=mapTime,
+                                                 scale=mapScale,
+                                                 x=mapX,
+                                                 z=mapZ,
+                                                 dim=mapDim)
+                mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2)
+                # print(mapImage.size)
 
-            mapImage.save(os.path.join(outputFolder, filename))
-            mapImage.close()
+                mapImage.save(os.path.join(outputFolder, filename))
+                mapImage.close()
 
 
 def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
     mapDatFiles = glob.glob(os.path.join(worldFolder, "data/map_*.dat"))
     os.makedirs(outputFolder, exist_ok=True)
+
+    idHashes = getidHashes(outputFolder)
+
     for mapDatFile in tqdm(mapDatFiles, "map_*.dat nbt -> png"):
         mapNbt = pynbt.NBTFile(io=gzip.open(mapDatFile))
         # print(mapDict["data"].keys())
@@ -173,7 +206,6 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
         if mapUnlimitedTracking and not unlimitedTracking:
             continue
         mapId = os.path.basename(mapDatFile).strip("map_").strip(".dat")
-        mapTime = os.path.getmtime(mapDatFile)
         mapScale = mapNbt["data"]["scale"].value
         mapX = mapNbt["data"]["xCenter"].value
         mapZ = mapNbt["data"]["zCenter"].value
@@ -202,26 +234,37 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
                                    "Dimension": dimDict[mapDim]})
         mapImage = Image.new("RGBA", (128, 128))
         mapImage.putdata(colorTuples)
-        mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2)
-        filename = filenameFormat.format(mapId=mapId,
-                                         epoch=mapTime,
-                                         scale=mapScale,
-                                         x=mapX,
-                                         z=mapZ,
-                                         dim=mapDim)
+        imageHash = hashlib.md5(mapImage.tobytes()).hexdigest()
 
-        mapImage.save(os.path.join(outputFolder, filename))
-        mapImage.close()
+        if str(mapId) not in idHashes.keys():
+
+            mapTime = os.path.getmtime(mapDatFile)
+        else:
+            mapTime = now
+
+        if (str(mapId), imageHash) not in idHashes.items() and imageHash != "fcd6bcb56c1689fcef28b57c22475bad":
+            mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2)
+            filename = filenameFormat.format(mapId=mapId,
+                                             mapHash=imageHash,
+                                             epoch=mapTime,
+                                             scale=mapScale,
+                                             x=mapX,
+                                             z=mapZ,
+                                             dim=mapDim)
+
+            mapImage.save(os.path.join(outputFolder, filename))
+            mapImage.close()
 
 
 def mergeToLevel4(mapPngFolder, outputFolder):
     filenameFormat = "merged_map_{dim}_{x}_{z}.png"
     os.makedirs(outputFolder, exist_ok=True)
     level4Dict = defaultdict(lambda: defaultdict(list))
-    mapPngs = glob.glob(os.path.join(mapPngFolder, "map_*_*_*_*_*_*.png"))
+    mapPngs = glob.glob(os.path.join(mapPngFolder, "map_*_*_*_*_*_*_*.png"))
     for mapPng in mapPngs:
         name = os.path.basename(mapPng)
         (mapId,
+         mapHash,
          epoch,
          dim,
          x,
