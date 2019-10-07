@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+    <title>Papyri</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link rel="stylesheet" href="./assets/css/papyri.css"/>
+    
+    <link rel="stylesheet" href="./assets/css/leaflet.css"/>
+    <script src="./assets/js/leaflet.js"></script>
+
+    <script src="./assets/js/leaflet-fullHash.js"></script>
+
+    <link rel="stylesheet" href="./assets/css/L.Control.MousePosition.css"/>
+    <script src="./assets/js/L.Control.MousePosition.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"/>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+	
+</head>
+<body>
+
+<div id='map'></div>
+
+<script>
+
+
+    factor = 1 / 2 ** 16
+    L.CRS.pr = L.extend({}, L.CRS.Simple, {
+        projection: L.Projection.LonLat,
+        transformation: new L.Transformation(
+            factor, 
+            64 * factor, 
+            factor, 
+            64 * factor),
+          scale: function(zoom) {
+                  return Math.pow(2, zoom);
+                },
+
+          zoom: function(scale) {
+                  return Math.log(scale) / Math.LN2;
+                },
+
+          distance: function(latlng1, latlng2) {
+                  var dx = latlng2.lng - latlng1.lng,
+                        dy = latlng2.lat - latlng1.lat;
+
+                  return Math.sqrt(dx * dx + dy * dy);
+                },
+          infinite: true
+    });
+	
+    tilesUrl = './tiles/{id}/{z}/{x}/{y}.png'
+    overworld = L.tileLayer(tilesUrl, {id: "0" }),
+    end = L.tileLayer(tilesUrl, {id: "1"}),
+    nether = L.tileLayer(tilesUrl, {id: "-1"});
+        
+    baseMaps = {
+        "Overworld": overworld,
+        "Nether": nether,
+        "End": end
+    };
+
+
+    map = L.map('map', {
+		crs: L.CRS.pr,
+                minZoom: 9,
+                maxZoom: 17,
+                layers: [overworld],
+                //touchZoom: false
+    });
+        
+        
+
+        L.control.mousePosition().addTo(map);
+        clusterGroupConfig =  {
+            iconCreateFunction: function(cluster) {
+		return L.divIcon({
+		iconSize: [576, 48],
+                className: 'banner-marker',
+                html: '<img class="banner-image" src="./assets/banner-images/multiple.png"/><span class="banner-name">' + cluster.getChildCount() + '</class>' });
+	    }}
+        overworldBanners = L.markerClusterGroup(clusterGroupConfig);
+        netherBanners = L.markerClusterGroup(clusterGroupConfig);
+        endBanners = L.markerClusterGroup(clusterGroupConfig);
+        overworldmca = L.layerGroup();
+        nethermca = L.layerGroup();
+        endmca = L.layerGroup();
+
+        overworldOverlay = {
+            "banners": overworldBanners,
+            "mca": overworldmca
+            };
+        netherOverlay = {
+            "banners": netherBanners,
+            "mca": nethermca
+            };
+        endOverlay = {
+            "banners": endBanners,
+            "mca": endmca
+            };
+        overlayMaps = {"overworld": overworldOverlay, "nether": netherOverlay, "end": endOverlay}
+
+        control = L.control.layers(baseMaps, overworldOverlay);
+        control.addTo(map);
+
+map.on('baselayerchange', function (event) {
+        console.log(event.name);
+        overworldBanners.remove();
+        netherBanners.remove();
+        endBanners.remove();
+        overworldmca.remove();
+        nethermca.remove();
+        endmca.remove();
+  switch (event.name) {
+    case "Overworld":
+      control.remove()
+      control = L.control.layers(baseMaps, overworldOverlay);
+      control.addTo(map);
+      break;
+    case "Nether":
+      control.remove()
+      control = L.control.layers(baseMaps, netherOverlay);
+      control.addTo(map);
+      break;
+    case "End":
+      control.remove()
+      control = L.control.layers(baseMaps, endOverlay);
+      control.addTo(map);
+      break;
+  }
+});
+
+
+        function loadJSON(file, callback) {   
+
+        var xobj = new XMLHttpRequest();
+        xobj.overrideMimeType("application/json");
+        xobj.open('GET', file, true); // Replace 'my_data' with the path to your file
+        xobj.onreadystatechange = function () {
+            if (xobj.readyState == 4 && xobj.status == "200") {
+            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+            callback(xobj.responseText);
+            }
+        };
+        xobj.send(null);  
+    }
+        loadJSON('banners.json', function(response) {
+           // Parse JSON string into object
+               markers = JSON.parse(response);
+	
+        for ( var i=0; i < markers.length; ++i ) 
+	{
+	   L.marker( [markers[i].Z, markers[i].X], {icon: L.divIcon({
+		iconSize: [576, 48],
+                className: 'banner-marker',
+                html: '<img class="banner-image" src="./assets/banner-images/' + markers[i].Color + 'banner.png"/><span class="banner-name">' + markers[i].Name + '</class>' })}).addTo( overlayMaps[markers[i].Dimension]['banners'] );
+	};
+        });
+        
+        loadJSON('mca.json', function(response) {
+           // Parse JSON string into object
+               markers = JSON.parse(response);
+	
+        for ( var i=0; i < markers.length; ++i ) 
+	{
+	   L.rectangle( markers[i].latlngs, {color: markers[i].Color}).addTo( overlayMaps[markers[i].Dimension]['mca'] );
+	};
+        });
+        map.fitBounds([[-1000, -1000], [1000, 1000]]);
+
+        var hash = new L.Hash(map, baseMaps);
+</script>
+</body>
+</html>

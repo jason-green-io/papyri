@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import os
+import datetime
 import glob
 import logging
 import pynbt
@@ -21,14 +22,26 @@ import hashlib
 import time
 
 
-fontPath = "./template/unifont-12.0.01.ttf"
-font = ImageFont.truetype(fontPath, 16)
 mapLinkFormat = "map/{d}/#zoom=0.02&x={x}&y={z}"
 
 filenameFormat = "map_{mapId}_{mapHash}_{epoch}_{dim}_{x}_{z}_{scale}.png"
 now = time.time()
 
 multipliers = [180, 220, 255, 135]
+
+colorGradient = ["#ff0000",
+                 "#ea0015",
+                 "#d4002b",
+                 "#bf0040",
+                 "#aa0055",
+                 "#95006a",
+                 "#800080",
+                 "#6a0095",
+                 "#5500aa",
+                 "#4000bf",
+                 "#2b00d4",
+                 "#1500ea",
+                 "#0000ff"]
 
 basecolors = [(0, 0, 0, 0),
               (127, 178, 56),
@@ -88,7 +101,12 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
 dimDict = {-1: "nether",
            0: "overworld",
-           1: " end"}
+           1: "end"}
+
+regionDict = {"region": 0,
+              "DIM1/region": 1,
+              "DIM-1/region": -1}
+
 
 bannersOverlay = []
 mapsOverlay = defaultdict(list)
@@ -423,18 +441,57 @@ def genBannerMarkers(bannerList, outputFolder):
             autoescape=jinja2.select_autoescape(['html', 'xml'])
     )
 
-    template = env.get_template('index-template.html')
+    template = env.get_template('banners.j2')
 
 
     output = template.render(banners=bannerList)
+    with open(os.path.join(outputFolder, "banners.json"), "+w", encoding="utf-8") as f:
+        f.write(json.dumps(bannerList))
 
-    with open(os.path.join(outputFolder, "index.html"), "+w", encoding="utf-8") as outFile:
-        outFile.write(output)
+    # with open(os.path.join(outputFolder, "index.html"), "+w", encoding="utf-8") as outFile:
+    #     outFile.write(output)
+
+def getMcaFiles(worldFolder):
+    mcaList = []
+    for dim in regionDict.items():
+        mcaFiles = glob.glob(os.path.join(worldFolder, dim[0], "*.mca" ))
+        for mcaFile in mcaFiles:
+            age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(mcaFile).st_mtime)
+            name = mcaFile.rsplit("/")[-1]
+            mca = {"name": name, "age": age.days, "dim": dim[1]}
+            mcaList.append(mca)
+            print(mca)
+    return mcaList
+
+
+
+
+
+def genMcaMarkers(mcaFileList, outputFolder):
+    mcaList = []
+    for mcaFile in mcaFileList:
+        Xregion, Zregion = mcaFile["name"].split(".")[1:3]
+        print(Xregion,Zregion)
+        X = int(Xregion) * 512
+        Z = int(Zregion) * 512
+        latlngs = [[Z, X], [Z + 511, X + 511]]
+        age = mcaFile["age"]
+        if age >= 128:
+            color = "black"
+        else:
+            color = colorGradient[int(age / 128 * 13)]
+        mca = {"Dimension": dimDict[mcaFile["dim"]], "latlngs": latlngs, "Color": color}
+        mcaList.append(mca)
+
+    with open(os.path.join(outputFolder, "mca.json"), "+w", encoding="utf-8") as f:
+        f.write(json.dumps(mcaList))
+
 
 def copyAssets(outputFolder):
     if not os.path.isdir(os.path.join(outputFolder, "assets")):
         logging.info("Assets folder not found, copying to %s", outputFolder)
         shutil.copytree("./template/assets", os.path.join(outputFolder, "assets"))
+        shutil.copyfile("./template/index.html", os.path.join(outputFolder))
 
     else:
         logging.info("Assets folder found")
@@ -458,6 +515,8 @@ def main():
         makeMapPngBedrock(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
     elif os.path.isdir(os.path.join(args.world, "data")):
         makeMapPngJava(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
+        mcaFilesList = getMcaFiles(args.world)
+        genMcaMarkers(mcaFilesList, args.output)
     else:
         logging.info("Map data not found in %s", args.output)
         sys.exit(1)
@@ -472,5 +531,5 @@ def main():
     logging.info("Done")
 
 
-
-main()
+if __name__ == "__main__":
+    main()
