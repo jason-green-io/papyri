@@ -15,7 +15,6 @@ import gzip
 import json
 import shutil
 import re
-import jinja2
 from io import BytesIO
 import sys
 import hashlib
@@ -435,21 +434,9 @@ def genBanners(bannerTupleList, outputFolder):
 
 def genBannerMarkers(bannerList, outputFolder):
 
-    templateLoader = jinja2.FileSystemLoader(searchpath="./template")
-    env = jinja2.Environment(
-            loader=templateLoader,
-            autoescape=jinja2.select_autoescape(['html', 'xml'])
-    )
-
-    template = env.get_template('banners.j2')
-
-
-    output = template.render(banners=bannerList)
     with open(os.path.join(outputFolder, "banners.json"), "+w", encoding="utf-8") as f:
         f.write(json.dumps(bannerList))
 
-    # with open(os.path.join(outputFolder, "index.html"), "+w", encoding="utf-8") as outFile:
-    #     outFile.write(output)
 
 def getMcaFiles(worldFolder):
     mcaList = []
