@@ -525,22 +525,36 @@ def getMcaFiles(worldFolder):
     return mcaList
 
 
+def genKeepMcaFiles(bannerList):
+    keep = set()
+    for banner in bannerList:
+        X = banner.X >> 9
+        Z = banner.Z >> 9
+        for Xkeep in range(X - 2, X + 3):
+            for Zkeep in range(Z - 2, Z + 3):
+                keep.add((Xkeep, Zkeep))
+
+    print(keep)
+    return keep
 
 
-
-def genMcaMarkers(mcaFileList, outputFolder):
+def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
     mcaList = []
     for mcaFile in mcaFileList:
         Xregion, Zregion = mcaFile["name"].split(".")[1:3]
-        print(Xregion,Zregion)
+        mcaName = (int(Xregion), int(Zregion))
+        print(mcaName)
         X = int(Xregion) * 512
         Z = int(Zregion) * 512
         latlngs = [[Z, X], [Z + 511, X + 511]]
         age = mcaFile["age"]
-        if age >= 128:
-            color = "black"
+        if mcaName in keepMcaFiles:
+            color = "blue"
         else:
-            color = colorGradient[int(age / 128 * 64)]
+            if age >= 128:
+                color = "black"
+            else:
+                color = colorGradient[int(age / 128 * 64)]
         mca = {"Dimension": dimDict[mcaFile["dim"]], "latlngs": latlngs, "Color": color}
         mcaList.append(mca)
 
@@ -577,7 +591,8 @@ def main():
     elif os.path.isdir(os.path.join(args.world, "data")):
         makeMapPngJava(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
         mcaFilesList = getMcaFiles(args.world)
-        genMcaMarkers(mcaFilesList, args.output)
+        keepMcaFiles = genKeepMcaFiles(bannersOverlay)
+        genMcaMarkers(mcaFilesList, args.output, keepMcaFiles)
     else:
         logging.info("Map data not found in %s", args.output)
         sys.exit(1)
