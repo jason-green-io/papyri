@@ -8,7 +8,7 @@ import bedrock.leveldb as leveldb
 from PIL import ImageFont, Image, ImageDraw
 import math
 import operator
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, namedtuple
 from tqdm import tqdm
 import argparse
 import gzip
@@ -107,9 +107,9 @@ regionDict = {"region": 0,
               "DIM-1/region": -1}
 
 
-bannersOverlay = []
+bannersOverlay = set()
 mapsOverlay = defaultdict(list)
-
+Banner = namedtuple("Banner", ["X", "Y", "Z", "Name", "Dimension", "Color"])
 
 def multiplyColor(colorTuple, multiplier):
     return tuple([math.floor(a * multiplier / 255.0) for a in colorTuple])
@@ -175,17 +175,20 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
                 Y = banner["Pos"]["Y"].value
                 Z = banner["Pos"]["Z"].value
                 Color = banner["Color"].value
+                Dim = dimDict[mapDim]
                 try:
                     Name = json.loads(banner["Name"].value)["text"]
 
                 except KeyError:
                     Name = ""
-                bannersOverlay.append({"X": X,
-                                       "Y": Y,
-                                       "Z": Z,
-                                       "Color": Color,
-                                       "Name": Name,
-                                       "Dimension": dimDict[mapDim]})
+                bannerDict = {"X": X,
+                              "Y": Y,
+                              "Z": Z,
+                              "Color": Color,
+                              "Name": Name,
+                              "Dimension": Dim}
+                bannerTuple = Banner(**bannerDict)
+                bannersOverlay.add(bannerTuple)
             mapImage = Image.frombytes("RGBA", (128, 128),
                                        bytes([x % 256 for x in mapColors]),
                                        'raw')
@@ -214,7 +217,7 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
 
     for mapDatFile in tqdm(mapDatFiles, "map_*.dat nbt -> png"):
         mapNbt = pynbt.NBTFile(io=gzip.open(mapDatFile))
-        # print(mapDict["data"].keys())
+        print(mapNbt["data"].keys())
         try:
             mapUnlimitedTracking = mapNbt["data"]["unlimitedTracking"].value
         except KeyError:
@@ -231,24 +234,29 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
         colorTuples = [allColors[x % 256] for x in mapColors]
         try:
             banners = mapNbt["data"]["banners"]
+            print(banners)
         except KeyError:
             banners = []
         for banner in banners:
+            print(banner)
             X = banner["Pos"]["X"].value
             Y = banner["Pos"]["Y"].value
             Z = banner["Pos"]["Z"].value
             Color = banner["Color"].value
+            Dim = dimDict[mapDim]
             try:
                 Name = json.loads(banner["Name"].value)["text"]
 
             except KeyError:
                 Name = ""
-            bannersOverlay.append({"X": X,
-                                   "Y": Y,
-                                   "Z": Z,
-                                   "Color": Color,
-                                   "Name": Name,
-                                   "Dimension": dimDict[mapDim]})
+            bannerDict = {"X": X,
+                          "Y": Y,
+                          "Z": Z,
+                          "Color": Color,
+                          "Name": Name,
+                          "Dimension": Dim}
+            bannerTuple = Banner(**bannerDict)
+            bannersOverlay.add(bannerTuple)
         mapImage = Image.new("RGBA", (128, 128))
         mapImage.putdata(colorTuples)
         imageHash = hashlib.md5(mapImage.tobytes()).hexdigest()
@@ -433,9 +441,10 @@ def genBanners(bannerTupleList, outputFolder):
             #poiImages.append(dict(h=64, w=256, id=overlayId, src="../../{imageName}".format(imageName), title=coords, alt=coords))
 
 def genBannerMarkers(bannerList, outputFolder):
-
+    print(bannerList)
     with open(os.path.join(outputFolder, "banners.json"), "+w", encoding="utf-8") as f:
-        f.write(json.dumps(bannerList))
+        bannerList = [a._asdict() for a in bannerList]
+        f.write(json.dumps(list(bannerList)))
 
 
 def getMcaFiles(worldFolder):
@@ -478,7 +487,7 @@ def copyAssets(outputFolder):
     if not os.path.isdir(os.path.join(outputFolder, "assets")):
         logging.info("Assets folder not found, copying to %s", outputFolder)
         shutil.copytree("./template/assets", os.path.join(outputFolder, "assets"))
-        shutil.copyfile("./template/index.html", os.path.join(outputFolder))
+        shutil.copy("./template/index.html", os.path.join(outputFolder))
 
     else:
         logging.info("Assets folder found")
