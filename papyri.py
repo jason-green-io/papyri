@@ -171,6 +171,9 @@ regionDict = {"region": 0,
               "DIM1/region": 1,
               "DIM-1/region": -1}
 
+regionDictRev = {0: "region",
+                 1: "DIM1/region",
+                 -1: "DIM-1/region"}
 
 bannersOverlay = set()
 mapsOverlay = defaultdict(list)
@@ -548,6 +551,7 @@ def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
         Z = int(Zregion) * 512
         latlngs = [[Z, X], [Z + 511, X + 511]]
         age = mcaFile["age"]
+        dim = mcaFile["dim"]
         if mcaName in keepMcaFiles:
             color = "blue"
         else:
@@ -555,11 +559,14 @@ def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
                 color = "black"
             else:
                 color = colorGradient[int(age / 128 * 64)]
-        mca = {"Dimension": dimDict[mcaFile["dim"]], "latlngs": latlngs, "Color": color}
+        mca = {"Filename": "{}/r.{}.{}.mca".format(regionDictRev[dim],
+        mcaName[0], mcaName[1]), "Dimension": dimDict[dim], "latlngs": latlngs, "Color": color}
         mcaList.append(mca)
 
     with open(os.path.join(outputFolder, "mca.json"), "+w", encoding="utf-8") as f:
         f.write(json.dumps(mcaList))
+
+
 
 
 def copyAssets(outputFolder):
