@@ -165,15 +165,17 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
 dimDict = {-1: "nether",
            0: "overworld",
-           1: "end"}
+           1: "end",
+           "nether": -1,
+           "overworld": 0,
+           "end": 1}
 
 regionDict = {"region": 0,
               "DIM1/region": 1,
-              "DIM-1/region": -1}
-
-regionDictRev = {0: "region",
-                 1: "DIM1/region",
-                 -1: "DIM-1/region"}
+              "DIM-1/region": -1,
+              0: "region",
+              1: "DIM1/region",
+              -1: "DIM-1/region"}
 
 bannersOverlay = set()
 mapsOverlay = defaultdict(list)
@@ -311,7 +313,7 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
             Y = banner["Pos"]["Y"].value
             Z = banner["Pos"]["Z"].value
             Color = banner["Color"].value
-            Dim = dimDict[mapDim]
+            Dim = mapDim
             try:
                 Name = json.loads(banner["Name"].value)["text"]
 
@@ -517,12 +519,12 @@ def genBannerMarkers(bannerList, outputFolder):
 
 def getMcaFiles(worldFolder):
     mcaList = []
-    for dim in regionDict.items():
-        mcaFiles = glob.glob(os.path.join(worldFolder, dim[0], "*.mca" ))
+    for dim in [-1, 0 ,1]:
+        mcaFiles = glob.glob(os.path.join(worldFolder, dimDict[dim], "*.mca" ))
         for mcaFile in mcaFiles:
             age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(mcaFile).st_mtime)
             name = mcaFile.rsplit("/")[-1]
-            mca = {"name": name, "age": age.days, "dim": dim[1]}
+            mca = {"name": name, "age": age.days, "dim": dim}
             mcaList.append(mca)
             print(mca)
     return mcaList
@@ -534,6 +536,7 @@ def genKeepMcaFiles(bannerList):
         X = banner.X >> 9
         Z = banner.Z >> 9
         Dim = banner.Dimension
+        print(Dim)
         for Xkeep in range(X - 2, X + 3):
             for Zkeep in range(Z - 2, Z + 3):
                 keep.add((Dim, Xkeep, Zkeep))
@@ -551,7 +554,7 @@ def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
         latlngs = [[Z, X], [Z + 511, X + 511]]
         age = mcaFile["age"]
         dim = mcaFile["dim"]
-        mca = (dim, int(Xregion), int(Zregion))
+        mca = (int(dim), int(Xregion), int(Zregion))
         if mca in keepMcaFiles:
             color = "blue"
         else:
