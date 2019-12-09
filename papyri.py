@@ -533,9 +533,10 @@ def genKeepMcaFiles(bannerList):
     for banner in bannerList:
         X = banner.X >> 9
         Z = banner.Z >> 9
+        Dim = banner.Dimension
         for Xkeep in range(X - 2, X + 3):
             for Zkeep in range(Z - 2, Z + 3):
-                keep.add((Xkeep, Zkeep))
+                keep.add((Dim, Xkeep, Zkeep))
 
     print(keep)
     return keep
@@ -545,14 +546,13 @@ def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
     mcaList = []
     for mcaFile in mcaFileList:
         Xregion, Zregion = mcaFile["name"].split(".")[1:3]
-        mcaName = (int(Xregion), int(Zregion))
-        print(mcaName)
         X = int(Xregion) * 512
         Z = int(Zregion) * 512
         latlngs = [[Z, X], [Z + 511, X + 511]]
         age = mcaFile["age"]
         dim = mcaFile["dim"]
-        if mcaName in keepMcaFiles:
+        mca = (dim, int(Xregion), int(Zregion))
+        if mca in keepMcaFiles:
             color = "blue"
         else:
             if age >= 128:
@@ -560,7 +560,7 @@ def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
             else:
                 color = colorGradient[int(age / 128 * 64)]
         mca = {"Filename": "{}/r.{}.{}.mca".format(regionDictRev[dim],
-        mcaName[0], mcaName[1]), "Dimension": dimDict[dim], "latlngs": latlngs, "Color": color}
+        mca[1], mca[2]), "Dimension": dimDict[dim], "latlngs": latlngs, "Color": color}
         mcaList.append(mca)
 
     with open(os.path.join(outputFolder, "mca.json"), "+w", encoding="utf-8") as f:
