@@ -520,7 +520,7 @@ def genBannerMarkers(bannerList, outputFolder):
 def getMcaFiles(worldFolder):
     mcaList = []
     for dim in [-1, 0 ,1]:
-        mcaFiles = glob.glob(os.path.join(worldFolder, dimDict[dim], "*.mca" ))
+        mcaFiles = glob.glob(os.path.join(worldFolder, regionDict[dim], "*.mca" ))
         for mcaFile in mcaFiles:
             age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(mcaFile).st_mtime)
             name = mcaFile.rsplit("/")[-1]
@@ -562,7 +562,7 @@ def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
                 color = "black"
             else:
                 color = colorGradient[int(age / 128 * 64)]
-        mca = {"Filename": "{}/r.{}.{}.mca".format(regionDictRev[dim],
+        mca = {"Filename": "{}/r.{}.{}.mca".format(regionDict[dim],
         mca[1], mca[2]), "Dimension": dimDict[dim], "latlngs": latlngs, "Color": color}
         mcaList.append(mca)
 
