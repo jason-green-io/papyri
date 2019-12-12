@@ -313,7 +313,7 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
             Y = banner["Pos"]["Y"].value
             Z = banner["Pos"]["Z"].value
             Color = banner["Color"].value
-            Dim = mapDim
+            Dim = dimDict[mapDim]
             try:
                 Name = json.loads(banner["Name"].value)["text"]
 
@@ -535,7 +535,7 @@ def genKeepMcaFiles(bannerList):
     for banner in bannerList:
         X = banner.X >> 9
         Z = banner.Z >> 9
-        Dim = banner.Dimension
+        Dim = dimDict[banner.Dimension]
         print(Dim)
         for Xkeep in range(X - 2, X + 3):
             for Zkeep in range(Z - 2, Z + 3):
