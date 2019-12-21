@@ -57,9 +57,9 @@
     });
 	
     tilesUrl = './tiles/{id}/{z}/{x}/{y}.png'
-    overworld = L.tileLayer(tilesUrl, {id: "0" }),
-    end = L.tileLayer(tilesUrl, {id: "1"}),
-    nether = L.tileLayer(tilesUrl, {id: "-1"});
+    overworld = L.tileLayer(tilesUrl, {id: "0", maxZoom: 20, maxNativeZoom: 17}),
+    end = L.tileLayer(tilesUrl, {id: "1", maxZoom: 20, maxNativeZoom: 17}),
+    nether = L.tileLayer(tilesUrl, {id: "-1", maxZoom: 20, maxNativeZoom: 17});
         
     baseMaps = {
         "Overworld": overworld,
@@ -70,8 +70,6 @@
 
     map = L.map('map', {
 		crs: L.CRS.pr,
-                minZoom: 9,
-                maxZoom: 17,
                 layers: [overworld],
                 //touchZoom: false
     });
