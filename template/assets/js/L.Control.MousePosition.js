@@ -1,7 +1,7 @@
 L.Control.MousePosition = L.Control.extend({
   options: {
     position: 'bottomleft',
-    separator: ' : ',
+    separator: ', ',
     emptyString: 'Unavailable',
     lngFirst: true,
     numDigits: 5,
@@ -27,7 +27,12 @@ L.Control.MousePosition = L.Control.extend({
     var lat = this.options.latFormatter ? this.options.latFormatter(e.latlng.lat) : L.Util.formatNum(e.latlng.lat, this.options.numDigits);
     var value = this.options.lngFirst ? lng + this.options.separator + lat : lat + this.options.separator + lng;
     var prefixAndValue = this.options.prefix + ' ' + value;
-    this._container.innerHTML = prefixAndValue;
+    var lngChunk = lng >> 4
+    var latChunk = lat >> 4
+    var lngRegion = lng >> 9
+    var latRegion = lat >> 9
+    var coords = "XZ: " + lng + " / " + lat + " Chunk: " + lngChunk + " " + latChunk + " Region: " + lngRegion + " " + latRegion
+    this._container.innerHTML = coords;
   }
 
 });
