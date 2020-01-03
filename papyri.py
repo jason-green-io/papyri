@@ -20,6 +20,7 @@ import sys
 import hashlib
 import time
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 mapLinkFormat = "map/{d}/#zoom=0.02&x={x}&y={z}"
 
@@ -221,7 +222,7 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
             mapNbtIo = BytesIO(a[1])
             mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
             mapNbt = mapNbtFile.root
-            print(mapNbt)
+            # print(mapNbt)
 
             try:
                 mapUnlimitedTracking = mapNbt["unlimitedTracking"]
@@ -577,8 +578,8 @@ def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
 def copyAssets(outputFolder):
     if not os.path.isdir(os.path.join(outputFolder, "assets")):
         logging.info("Assets folder not found, copying to %s", outputFolder)
-        shutil.copytree("./template/assets", os.path.join(outputFolder, "assets"))
-        shutil.copy("./template/index.html", os.path.join(outputFolder))
+        shutil.copytree(os.path.join(dir_path, "./template/assets"), os.path.join(outputFolder, "assets"))
+        shutil.copy(os.path.join(dir_path, "./template/index.html"), os.path.join(outputFolder))
 
     else:
         logging.info("Assets folder found")
