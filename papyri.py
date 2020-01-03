@@ -3,7 +3,7 @@ import os
 import datetime
 import glob
 import logging
-import pynbt
+import nbtlib
 import bedrock.leveldb as leveldb
 from PIL import ImageFont, Image, ImageDraw
 import math
@@ -202,14 +202,13 @@ def getidHashes(outputFolder):
         idHashEpochs.append((mapId, mapHash, epoch))
 
     idHashEpochs.sort(key=operator.itemgetter(2))
-    [print(a) for a in idHashEpochs]
+    #[print(a) for a in idHashEpochs]
     for idHashEpoch in idHashEpochs:
         idHashes[idHashEpoch[0]] = idHashEpoch[1]
-    [print(a) for a in idHashes.items()]
+    #[print(a) for a in idHashes.items()]
     return idHashes
 
 def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
-
     os.makedirs(outputFolder, exist_ok=True)
 
     idHashes = getidHashes(outputFolder)
@@ -220,34 +219,36 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
         key = bytearray(a[0])
         if b"map" in key:
             mapNbtIo = BytesIO(a[1])
-            mapNbt = pynbt.NBTFile(io=mapNbtIo, little_endian=True)
+            mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
+            mapNbt = mapNbtFile.root
+            print(mapNbt)
 
             try:
-                mapUnlimitedTracking = mapNbt["unlimitedTracking"].value
+                mapUnlimitedTracking = mapNbt["unlimitedTracking"]
             except KeyError:
                 mapUnlimitedTracking = False
 
             if mapUnlimitedTracking and not unlimitedTracking:
                 continue
-            mapId = mapNbt["mapId"].value
-            mapScale = mapNbt["scale"].value
+            mapId = int(mapNbt["mapId"])
+            mapScale = int(mapNbt["scale"])
             mapTime = now
-            mapX = mapNbt["xCenter"].value
-            mapZ = mapNbt["zCenter"].value
-            mapDim = mapNbt["dimension"].value
-            mapColors = mapNbt["colors"].value
+            mapX = int(mapNbt["xCenter"])
+            mapZ = int(mapNbt["zCenter"])
+            mapDim = int(mapNbt["dimension"])
+            mapColors = mapNbt["colors"]
             try:
                 banners = mapNbt["banners"]
             except KeyError:
                 banners = []
             for banner in banners:
-                X = banner["Pos"]["X"].value
-                Y = banner["Pos"]["Y"].value
-                Z = banner["Pos"]["Z"].value
-                Color = banner["Color"].value
+                X = banner["Pos"]["X"]
+                Y = banner["Pos"]["Y"]
+                Z = banner["Pos"]["Z"]
+                Color = banner["Color"]
                 Dim = dimDict[mapDim]
                 try:
-                    Name = json.loads(banner["Name"].value)["text"]
+                    Name = json.loads(banner["Name"])["text"]
 
                 except KeyError:
                     Name = ""
@@ -286,36 +287,37 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
     idHashes = getidHashes(outputFolder)
 
     for mapDatFile in tqdm(mapDatFiles, "map_*.dat nbt -> png"):
-        mapNbt = pynbt.NBTFile(io=gzip.open(mapDatFile))
-        print(mapNbt["data"].keys())
+        mapNbtFile = nbtlib.load(mapDatFile)
+        mapNbt = mapNbtFile.root
+        # print(mapNbt["data"])
         try:
-            mapUnlimitedTracking = mapNbt["data"]["unlimitedTracking"].value
+            mapUnlimitedTracking = mapNbt["data"]["unlimitedTracking"]
         except KeyError:
             mapUnlimitedTracking = False
 
         if mapUnlimitedTracking and not unlimitedTracking:
             continue
         mapId = os.path.basename(mapDatFile).strip("map_").strip(".dat")
-        mapScale = mapNbt["data"]["scale"].value
-        mapX = mapNbt["data"]["xCenter"].value
-        mapZ = mapNbt["data"]["zCenter"].value
-        mapDim = mapNbt["data"]["dimension"].value
-        mapColors = mapNbt["data"]["colors"].value
+        mapScale = mapNbt["data"]["scale"]
+        mapX = mapNbt["data"]["xCenter"]
+        mapZ = mapNbt["data"]["zCenter"]
+        mapDim = mapNbt["data"]["dimension"]
+        mapColors = mapNbt["data"]["colors"]
         colorTuples = [allColors[x % 256] for x in mapColors]
         try:
             banners = mapNbt["data"]["banners"]
-            print(banners)
+            # print(banners)
         except KeyError:
             banners = []
         for banner in banners:
-            print(banner)
-            X = banner["Pos"]["X"].value
-            Y = banner["Pos"]["Y"].value
-            Z = banner["Pos"]["Z"].value
-            Color = banner["Color"].value
+            # print(banner)
+            X = banner["Pos"]["X"]
+            Y = banner["Pos"]["Y"]
+            Z = banner["Pos"]["Z"]
+            Color = banner["Color"]
             Dim = dimDict[mapDim]
             try:
-                Name = json.loads(banner["Name"].value)["text"]
+                Name = json.loads(banner["Name"])["text"]
 
             except KeyError:
                 Name = ""
@@ -511,7 +513,7 @@ def genBanners(bannerTupleList, outputFolder):
             #poiImages.append(dict(h=64, w=256, id=overlayId, src="../../{imageName}".format(imageName), title=coords, alt=coords))
 
 def genBannerMarkers(bannerList, outputFolder):
-    print(bannerList)
+    # print(bannerList)
     with open(os.path.join(outputFolder, "banners.json"), "+w", encoding="utf-8") as f:
         bannerList = [a._asdict() for a in bannerList]
         f.write(json.dumps(list(bannerList)))
@@ -526,7 +528,7 @@ def getMcaFiles(worldFolder):
             name = mcaFile.rsplit("/")[-1]
             mca = {"name": name, "age": age.days, "dim": dim}
             mcaList.append(mca)
-            print(mca)
+            # print(mca)
     return mcaList
 
 
@@ -536,12 +538,12 @@ def genKeepMcaFiles(bannerList):
         X = banner.X >> 9
         Z = banner.Z >> 9
         Dim = dimDict[banner.Dimension]
-        print(Dim)
+        # print(Dim)
         for Xkeep in range(X - 2, X + 3):
             for Zkeep in range(Z - 2, Z + 3):
                 keep.add((Dim, Xkeep, Zkeep))
 
-    print(keep)
+    # print(keep)
     return keep
 
 
@@ -604,7 +606,7 @@ def main():
         keepMcaFiles = genKeepMcaFiles(bannersOverlay)
         genMcaMarkers(mcaFilesList, args.output, keepMcaFiles)
     else:
-        logging.info("Map data not found in %s", args.output)
+        logging.info("Map data not found in %s", args.world)
         sys.exit(1)
 
     mergeToLevel4(mapsOutput, mergedMapsOutput)

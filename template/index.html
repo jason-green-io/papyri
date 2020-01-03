@@ -122,7 +122,10 @@
         "ER": endmca
     }
     
+    map.fitBounds([[-1000, -1000], [1000, 1000]]);
+    
     var hash = new L.Hash(map, allLayers);
+    
     control = L.control.layers(baseMaps, overworldOverlay);
     control.addTo(map);
 
@@ -189,7 +192,6 @@
         };
     });
     
-    map.fitBounds([[-1000, -1000], [1000, 1000]]);
     
 
 </script>
