@@ -299,10 +299,10 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
         if mapUnlimitedTracking and not unlimitedTracking:
             continue
         mapId = os.path.basename(mapDatFile).strip("map_").strip(".dat")
-        mapScale = mapNbt["data"]["scale"]
-        mapX = mapNbt["data"]["xCenter"]
-        mapZ = mapNbt["data"]["zCenter"]
-        mapDim = mapNbt["data"]["dimension"]
+        mapScale = int(mapNbt["data"]["scale"])
+        mapX = int(mapNbt["data"]["xCenter"])
+        mapZ = int(mapNbt["data"]["zCenter"])
+        mapDim = int(mapNbt["data"]["dimension"])
         mapColors = mapNbt["data"]["colors"]
         colorTuples = [allColors[x % 256] for x in mapColors]
         try:
@@ -312,9 +312,9 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
             banners = []
         for banner in banners:
             # print(banner)
-            X = banner["Pos"]["X"]
-            Y = banner["Pos"]["Y"]
-            Z = banner["Pos"]["Z"]
+            X = int(banner["Pos"]["X"])
+            Y = int(banner["Pos"]["Y"])
+            Z = int(banner["Pos"]["Z"])
             Color = banner["Color"]
             Dim = dimDict[mapDim]
             try:
