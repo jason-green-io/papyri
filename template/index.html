@@ -95,17 +95,25 @@
     nethermca = L.layerGroup();
     endmca = L.layerGroup();
 
+    overworldmaps = L.layerGroup();
+    nethermaps = L.layerGroup();
+    endmaps = L.layerGroup();
+
+
     overworldOverlay = {
         "banners": overworldBanners,
-        "mca": overworldmca
+        "regions": overworldmca,
+        "ids": overworldmaps
         };
     netherOverlay = {
         "banners": netherBanners,
-        "mca": nethermca
+        "regions": nethermca,
+        "ids": nethermaps
         };
     endOverlay = {
         "banners": endBanners,
-        "mca": endmca
+        "regions": endmca,
+        "ids": endmaps
         };
     
     overlayMaps = {"overworld": overworldOverlay, "nether": netherOverlay, "end": endOverlay}
@@ -119,7 +127,10 @@
         "NB": netherBanners,
         "NR": nethermca,
         "EB": endBanners,
-        "ER": endmca
+        "ER": endmca,
+        "OI": overworldmaps,
+        "NI": nethermaps,
+        "EI": endmaps
     }
     
     map.fitBounds([[-1000, -1000], [1000, 1000]]);
@@ -137,6 +148,9 @@
         overworldmca.remove();
         nethermca.remove();
         endmca.remove();
+        overworldmaps.remove();
+        nethermaps.remove();
+        endmaps.remove();
         switch (event.name) {
             case "Overworld":
               control.remove()
@@ -158,7 +172,6 @@
 
 
     function loadJSON(file, callback) {   
-
         var xobj = new XMLHttpRequest();
         xobj.overrideMimeType("application/json");
         xobj.open('GET', file, true); // Replace 'my_data' with the path to your file
@@ -179,7 +192,7 @@
 	        L.marker( [markers[i].Z, markers[i].X], {icon: L.divIcon({
 		        iconSize: [576, 48],
                 className: 'banner-marker',
-                html: '<img class="banner-image" src="./assets/banner-images/' + markers[i].Color + 'banner.png"/><span class="banner-name">' + markers[i].Name + '</class>' })}).addTo( overlayMaps[markers[i].Dimension]['banners'] );
+                html: '<img class="banner-image" src="./assets/banner-images/' + markers[i].color + 'banner.png"/><span class="banner-name">' + markers[i].name + '</class>' })}).addTo( overlayMaps[markers[i].dimension]['banners'] );
 	    };
     });
         
@@ -188,11 +201,19 @@
         markers = JSON.parse(response);
 
         for ( var i=0; i < markers.length; ++i ) {
-            L.rectangle( markers[i].latlngs, {color: markers[i].Color}).addTo( overlayMaps[markers[i].Dimension]['mca'] );
+            L.rectangle( markers[i].latlngs, {color: markers[i].color}).addTo(overlayMaps[markers[i].dimension]['regions'] );
         };
     });
     
     
+    loadJSON('maps.json', function(response) {
+        // Parse JSON string into object
+        markers = JSON.parse(response);
+
+        for ( var i=0; i < markers.length; ++i ) {
+            L.rectangle( markers[i].latlngs, {color:markers[i].color}).addTo(overlayMaps[markers[i].dimension]['ids'] );
+        };
+    });
 
 </script>
 </body>
