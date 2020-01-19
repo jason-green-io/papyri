@@ -601,7 +601,7 @@ def genMapIdMarkers(maps, outputFolder):
 
 def copyTemplate(outputFolder, copytemplate):
     if not os.path.isdir(os.path.join(outputFolder, "assets")) or copytemplate:
-        logging.info("Assets folder not found, copying to %s", outputFolder)
+        logging.info("Copying template to %s", outputFolder)
         shutil.copytree(os.path.join(dir_path, "./template/assets"), os.path.join(outputFolder, "assets"))
         shutil.copy(os.path.join(dir_path, "./template/index.html"), os.path.join(outputFolder))
 
@@ -613,7 +613,7 @@ def main():
     parser.add_argument('--world', help="world folder or save folder (this is the folder level.dat is in)", required=True)
     parser.add_argument('--includeunlimitedtracking', help="include maps that have unlimited tracking on, this includes older maps from previous Minecraft versions and treasure maps in +1.13", action="store_true")
     parser.add_argument('--output', help="output path for web stuff", required=True)
-    parser.add_argument('--copytemplate', help="copy default index.html and assets (do this if a new release changes the tempalte)")
+    parser.add_argument('--copytemplate', help="copy default index.html and assets (do this if a new release changes the tempalte)", action="store_true")
 
     # get the args
     args = parser.parse_args()
