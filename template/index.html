@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"/>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
+    <script src='https://unpkg.com/@mapbox/leaflet-pip@latest/leaflet-pip.js'></script>
 	
 </head>
 <body>
@@ -68,6 +69,8 @@
         "End": end
     };
 
+    const IDcolors = ["red", "blue", "green", "purple", "orange"];
+    const scaleText = ["1:1", "1:2", "1:4", "1:8", "1:16"]
 
     map = L.map('map', {
 		crs: L.CRS.pr,
@@ -75,9 +78,9 @@
         //touchZoom: false
     });
         
-        
 
     L.control.mousePosition().addTo(map);
+
     clusterGroupConfig =  {
         iconCreateFunction: function(cluster) {
             return L.divIcon({
@@ -87,84 +90,121 @@
         }
     }
     
+    function handleClick(e) {
+            var html = '<span style=\"font-size:16px;font-family:unifont\">Last ID in the lists is rendered.</br>';
+        console.log(e)
+        var match = leafletPip.pointInLayer(
+        // the clicked point
+        e.latlng,
+        // this layer
+        e.target,
+        // whether to stop at first match
+        false);
+        if (match.length) {
+            for (var i = 0; i < match.length; i++) {
+                scale = match[i].feature.properties.scale 
+                html += "<span style=\"color:" + IDcolors[scale] + "\">"
+                     + scaleText[scale] + " scale: "
+                     + " IDs: " + match[i].feature.properties.IDs
+                     + "</span></br>"
+
+            }
+        html += "</span>"
+        }
+		if (html) {
+			map.openPopup(html, e.latlng);
+		}
+	}
+
     overworldBanners = L.markerClusterGroup(clusterGroupConfig);
     netherBanners = L.markerClusterGroup(clusterGroupConfig);
     endBanners = L.markerClusterGroup(clusterGroupConfig);
     
-    overworldmca = L.layerGroup();
-    nethermca = L.layerGroup();
-    endmca = L.layerGroup();
+    overworldRegions = L.layerGroup();
+    netherRegions = L.layerGroup();
+    endRegions = L.layerGroup();
 
-    overworldmaps = L.layerGroup();
-    nethermaps = L.layerGroup();
-    endmaps = L.layerGroup();
+    style = { style: function (feature) {
+		  				return {color: IDcolors[feature.properties.scale]}
+						}
+    		}
+                
+    overworldMaps = L.geoJSON(null, style).on('click', handleClick);
+    netherMaps = L.geoJSON(null, style).on('click', handleClick);
+    endMaps = L.geoJSON(null, style).on('click', handleClick);
 
+	mapsOverlays = [overworldMaps, netherMaps, endMaps];
 
-    overworldOverlay = {
+    overworldOverlays = {
         "banners": overworldBanners,
-        "regions": overworldmca,
-        "ids": overworldmaps
+        "regions": overworldRegions,
+        "ids": overworldMaps
         };
-    netherOverlay = {
+    netherOverlays = {
         "banners": netherBanners,
-        "regions": nethermca,
-        "ids": nethermaps
+        "regions": netherRegions,
+        "ids": netherMaps
         };
-    endOverlay = {
+    endOverlays = {
         "banners": endBanners,
-        "regions": endmca,
-        "ids": endmaps
+        "regions": endRegions,
+        "ids": endMaps
         };
     
-    overlayMaps = {"overworld": overworldOverlay, "nether": netherOverlay, "end": endOverlay}
+    allOverlays = {
+        "overworld": overworldOverlays,
+        "nether": netherOverlays,
+        "end": endOverlays
+        };
 
-    var allLayers = {
+    var allOverlaysForHash = {
         "O": overworld,
         "N": nether,
         "E": end,
         "OB": overworldBanners,
-        "OR": overworldmca,
+        "OR": overworldRegions,
         "NB": netherBanners,
-        "NR": nethermca,
+        "NR": netherRegions,
         "EB": endBanners,
-        "ER": endmca,
-        "OI": overworldmaps,
-        "NI": nethermaps,
-        "EI": endmaps
-    }
+        "ER": endRegions,
+        "OI": overworldMaps,
+        "NI": netherMaps,
+        "EI": endMaps
+    };
     
     map.fitBounds([[-1000, -1000], [1000, 1000]]);
     
-    var hash = new L.Hash(map, allLayers);
+    var hash = new L.Hash(map, allOverlaysForHash);
     
-    control = L.control.layers(baseMaps, overworldOverlay);
+    control = L.control.layers(baseMaps, overworldOverlays);
     control.addTo(map);
 
     map.on('baselayerchange', function (event) {
         console.log(event.name);
+        map.closePopup();
         overworldBanners.remove();
         netherBanners.remove();
         endBanners.remove();
-        overworldmca.remove();
-        nethermca.remove();
-        endmca.remove();
-        overworldmaps.remove();
-        nethermaps.remove();
-        endmaps.remove();
+        overworldRegions.remove();
+        netherRegions.remove();
+        endRegions.remove();
+        overworldMaps.remove();
+        netherMaps.remove();
+        endMaps.remove();
         switch (event.name) {
             case "Overworld":
               control.remove()
-              control = L.control.layers(baseMaps, overworldOverlay);
+              control = L.control.layers(baseMaps, overworldOverlays);
               control.addTo(map);
               break;
             case "Nether":
               control.remove()
-              control = L.control.layers(baseMaps, netherOverlay);
+              control = L.control.layers(baseMaps, netherOverlays);
               control.addTo(map);
               break;
             case "End":
               control.remove()
-              control = L.control.layers(baseMaps, endOverlay);
+              control = L.control.layers(baseMaps, endOverlays);
               control.addTo(map);
               break;
         }
@@ -192,7 +232,9 @@
 	        L.marker( [markers[i].Z, markers[i].X], {icon: L.divIcon({
 		        iconSize: [576, 48],
                 className: 'banner-marker',
-                html: '<img class="banner-image" src="./assets/banner-images/' + markers[i].color + 'banner.png"/><span class="banner-name">' + markers[i].name + '</class>' })}).addTo( overlayMaps[markers[i].dimension]['banners'] );
+                html: '<img class="banner-image" src="./assets/banner-images/'
+                + markers[i].color + 'banner.png"/><span class="banner-name">'
+                + markers[i].name + '</class>' })}).addTo( allOverlays[markers[i].dimension]['banners'] );
 	    };
     });
         
@@ -201,20 +243,19 @@
         markers = JSON.parse(response);
 
         for ( var i=0; i < markers.length; ++i ) {
-            L.rectangle( markers[i].latlngs, {color: markers[i].color}).addTo(overlayMaps[markers[i].dimension]['regions'] );
+            L.rectangle( markers[i].latlngs, {color: markers[i].color}).addTo(allOverlays[markers[i].dimension]['regions'] );
         };
     });
     
     
-    loadJSON('maps.json', function(response) {
+     loadJSON('maps.json', function(response) {
         // Parse JSON string into object
         markers = JSON.parse(response);
 
         for ( var i=0; i < markers.length; ++i ) {
-            L.rectangle( markers[i].latlngs, {color:markers[i].color}).addTo(overlayMaps[markers[i].dimension]['ids'] );
+            allOverlays[markers[i].properties.dimension]['ids'].addData(markers[i]);
         };
     });
-
 </script>
 </body>
 </html>

@@ -179,8 +179,64 @@ regionDict = {"region": 0,
               -1: "DIM-1/region"}
 
 banners = set()
-maps = defaultdict(list)
 Banner = namedtuple("Banner", ["X", "Y", "Z", "name", "dimension", "color"])
+
+
+class LastUpdatedOrderedDict(OrderedDict):
+    'Store items in the order the keys were last added'
+
+    def __setitem__(self, key, value):
+        if key in self:
+            del self[key]
+        OrderedDict.__setitem__(self, key, value)
+
+from collections import OrderedDict, Callable
+
+class DefaultOrderedDict(OrderedDict):
+    # Source: http://stackoverflow.com/a/6190500/562769
+    def __init__(self, default_factory=None, *a, **kw):
+        if (default_factory is not None and
+           not isinstance(default_factory, Callable)):
+            raise TypeError('first argument must be callable')
+        OrderedDict.__init__(self, *a, **kw)
+        self.default_factory = default_factory
+
+    def __getitem__(self, key):
+        try:
+            return OrderedDict.__getitem__(self, key)
+        except KeyError:
+            return self.__missing__(key)
+
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        self[key] = value = self.default_factory()
+        return value
+
+    def __reduce__(self):
+        if self.default_factory is None:
+            args = tuple()
+        else:
+            args = self.default_factory,
+        return type(self), args, None, None, self.items()
+
+    def copy(self):
+        return self.__copy__()
+
+    def __copy__(self):
+        return type(self)(self.default_factory, self)
+
+    def __deepcopy__(self, memo):
+        import copy
+        return type(self)(self.default_factory,
+                          copy.deepcopy(self.items()))
+
+    def __repr__(self):
+        return 'OrderedDefaultDict(%s, %s)' % (self.default_factory,
+                                               OrderedDict.__repr__(self))
+
+maps = DefaultOrderedDict(LastUpdatedOrderedDict)
+
 
 def multiplyColor(colorTuple, multiplier):
     return tuple([math.floor(a * multiplier / 255.0) for a in colorTuple])
@@ -199,11 +255,10 @@ def getidHashes(outputFolder):
         filename = filename.split("/")[-1].split("_")
         mapId = filename[1]
         mapHash = filename[2]
-        epoch = filename[3]
+        epoch = float(filename[3])
         idHashEpochs.append((mapId, mapHash, epoch))
-
     idHashEpochs.sort(key=operator.itemgetter(2))
-    #[print(a) for a in idHashEpochs]
+
     for idHashEpoch in idHashEpochs:
         idHashes[idHashEpoch[0]] = idHashEpoch[1]
     #[print(a) for a in idHashes.items()]
@@ -391,14 +446,18 @@ def mergeToLevel4(mapPngFolder, outputFolder):
         d = dim[0]
         for coords in tqdm(dim[1].items(), "level 4 of dim: {}".format(d)):
             c = coords[0]
-            coords[1].sort(key=lambda x: x.mapId)
-            coords[1].sort(key=lambda x: x.epoch)
-            coords[1].sort(key=lambda x: x.scale, reverse=True)
+            
+            mapTuples = coords[1]
+            
+            mapTuples.sort(key=lambda x: x.mapId)
+            mapTuples.sort(key=lambda x: x.epoch)
+            mapTuples.sort(key=lambda x: x.scale, reverse=True)
+            
             level4MapPng = Image.new("RGBA", (2048, 2048))
-            for mapTuple in coords[1]:
+            for mapTuple in mapTuples:
                 maps[(mapTuple.dimension, mapTuple.scale,
                       mapTuple.mapTopLeft[0],
-                      mapTuple.mapTopLeft[1])].append(mapTuple.mapId)
+                      mapTuple.mapTopLeft[1])].update({mapTuple.mapId: None})
                 mapPngCoords = (divmod(mapTuple.mapTopLeft[0], 2048)[1],
                                 divmod(mapTuple.mapTopLeft[1], 2048)[1])
                 with Image.open(os.path.join(mapPngFolder, mapTuple.name)) as mapPng:
@@ -490,9 +549,7 @@ def genBanners(bannerTupleList, outputFolder):
 
             bannerJson.append(POI)
 
-
             #poiOverlays.add(poiOverlay(overlayId, x, z, False, "CENTER"))
-
 
             bannerImage = Image.open(os.path.join("template", "banners-template", "{color}banner.png".format(color=banner["Color"])))
 
@@ -579,23 +636,33 @@ def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
 
 def genMapIdMarkers(maps, outputFolder):
     mapsList = []
-    colorDict = {0: "red",
-                 1: "green",
-                 2: "blue",
-                 3: "purple",
-                 4: "orange"}
 
     for amap in maps.items():
         X = amap[0][2] - 64
         Z = amap[0][3] - 64
+        
         scale = amap[0][1]
-        latlngs = [[Z, X], [Z + 128 * 2 ** scale, X + 128 * 2 ** scale]]
-        amap = { "dimension": dimDict[amap[0][0]],
-                 "IDs": ",".join([str(x) for x in amap[1]]),
-                 "latlngs": latlngs,
-                 "color": colorDict[scale]}
-        mapsList.append(amap)
-    print(mapsList)
+        width = 128 * 2 ** scale
+        dimension = amap[0][0] 
+        TL = [X, Z]
+        TR = [X, Z + width]
+        BL = [X + width, Z + width]
+        BR = [X + width, Z]
+
+        coordinates = [[TL, TR, BL, BR, TL]]
+        
+        properties = {"scale": scale,
+                      "dimension": dimDict[dimension],
+                      "IDs": ",".join([str(x) for x in amap[1].keys()]) }
+        
+        geometry = {"type": "Polygon",
+                    "coordinates": coordinates}
+        
+        feature = {"type": "Feature",
+                   "properties": properties,
+                   "geometry": geometry}
+        
+        mapsList.append(feature)
     with open(os.path.join(outputFolder, "maps.json"), "+w", encoding="utf-8") as f:
         f.write(json.dumps(mapsList))
 
