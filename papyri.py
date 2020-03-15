@@ -20,14 +20,14 @@ import sys
 import hashlib
 import time
 
-__author__ = “Jason Green”
-__copyright__ = “Copyright 2020, Tesseract Designs”
-__credits__ = [“Jason Green”]
-__license__ = “MIT”
-__version__ = “1.0”
-__maintainer__ = “Jason Green”
-__email__ = “jason@green.io”
-__status__ = “dev”
+__author__ = "Jason Green"
+__copyright__ = "Copyright 2020, Tesseract Designs"
+__credits__ = ["Jason Green"]
+__license__ = "MIT"
+__version__ = "1.0"
+__maintainer__ = "Jason Green"
+__email__ = "jason@green.io"
+__status__ = "dev"
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
