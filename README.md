@@ -13,7 +13,7 @@ python3 and pip (pip3) (Not tested in python2)
 
 some python stuff you'll need:
 
-    pip3 tqdm install libnbt Pillow
+    pip3 install tqdm nbtlib Pillow
 
 ## usage
 
@@ -34,7 +34,7 @@ optional arguments:
                         release changes the tempalte)
 ```
 
-Once it's done, the contents of the output folder can be served as a website. It's completely static so it can be put in an S3 bucket a github project or hosted locally on your machine by running something like `python3 -m SimpleHTTPServer` inside the output folder.
+Once it's done, the contents of the output folder can be served as a website. It's completely static so it can be put in an S3 bucket a github project or hosted locally on your machine by running something like `python3 -m http.server` inside the output folder.
 
 
 This project is licensed under the terms of the MIT license.
