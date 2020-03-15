@@ -13,7 +13,7 @@ python3 and pip (pip3) (Not tested in python2)
 
 some python stuff you'll need:
 
-    pip3 tqdm install libnbt Pillow
+    pip3 install tqdm nbtlib Pillow
 
 ## usage
 
