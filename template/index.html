@@ -120,18 +120,23 @@
     netherBanners = L.markerClusterGroup(clusterGroupConfig);
     endBanners = L.markerClusterGroup(clusterGroupConfig);
     
-    overworldRegions = L.layerGroup();
-    netherRegions = L.layerGroup();
-    endRegions = L.layerGroup();
+    overworldRegions = L.geoJSON();
+    netherRegions = L.geoJSON();
+    endRegions = L.geoJSON();
 
-    style = { style: function (feature) {
+    styleMaps = { style: function (feature) {
 		  				return {color: IDcolors[feature.properties.scale]}
 						}
     		}
                 
-    overworldMaps = L.geoJSON(null, style).on('click', handleClick);
-    netherMaps = L.geoJSON(null, style).on('click', handleClick);
-    endMaps = L.geoJSON(null, style).on('click', handleClick);
+    styleRegions = { style: function (feature) {
+		  				return {color: IDcolors[feature.properties.scale]}
+						}
+    		}
+
+    overworldMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
+    netherMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
+    endMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
 
 	mapsOverlays = [overworldMaps, netherMaps, endMaps];
 
@@ -140,11 +145,13 @@
         "regions": overworldRegions,
         "ids": overworldMaps
         };
+
     netherOverlays = {
         "banners": netherBanners,
         "regions": netherRegions,
         "ids": netherMaps
         };
+
     endOverlays = {
         "banners": endBanners,
         "regions": endRegions,
@@ -238,12 +245,12 @@
 	    };
     });
         
-    loadJSON('mca.json', function(response) {
+    loadJSON('regions.json', function(response) {
         // Parse JSON string into object
         markers = JSON.parse(response);
 
         for ( var i=0; i < markers.length; ++i ) {
-            L.rectangle( markers[i].latlngs, {color: markers[i].color}).addTo(allOverlays[markers[i].dimension]['regions'] );
+            allOverlays[markers[i].properties.dimension]['regions'].addData(markers[i]);
         };
     });
     

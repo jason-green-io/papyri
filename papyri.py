@@ -8,106 +8,42 @@ import bedrock.leveldb as leveldb
 from PIL import ImageFont, Image, ImageDraw
 import math
 import operator
-from collections import defaultdict, OrderedDict, namedtuple
+from collections import Callable, defaultdict, OrderedDict, namedtuple
 from tqdm import tqdm
 import argparse
 import gzip
 import json
-import shutil
+import distutils.dir_util
 import re
 from io import BytesIO
 import sys
 import hashlib
 import time
 
+__author__ = “Jason Green”
+__copyright__ = “Copyright 2020, Tesseract Designs”
+__credits__ = [“Jason Green”]
+__license__ = “MIT”
+__version__ = “1.0”
+__maintainer__ = “Jason Green”
+__email__ = “jason@green.io”
+__status__ = “dev”
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-mapLinkFormat = "map/{d}/#zoom=0.02&x={x}&y={z}"
-
+# filename format for map .dat file  color data
 filenameFormat = "map_{mapId}_{mapHash}_{epoch}_{dim}_{x}_{z}_{scale}.png"
+
+# now in epoch
 now = time.time()
 
+# setup the logger
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+
+# stuff to convert the map color data to RGB values
 multipliers = [180, 220, 255, 135]
 
-colorGradient = ["#ff0000",
-                 "#ea0015",
-                 "#d4002b",
-                 "#bf0040",
-                 "#aa0055",
-                 "#95006a",
-                 "#800080",
-                 "#6a0095",
-                 "#5500aa",
-                 "#4000bf",
-                 "#2b00d4",
-                 "#1500ea",
-                 "#0000ff"]
-colorGradient = ["#00FF00",
-                 "#08FF00",
-                 "#10FF00",
-                 "#18FF00",
-                 "#20FF00",
-                 "#28FF00",
-                 "#30FF00",
-                 "#38FF00",
-                 "#40FF00",
-                 "#48FF00",
-                 "#50FF00",
-                 "#59FF00",
-                 "#61FF00",
-                 "#69FF00",
-                 "#71FF00",
-                 "#79FF00",
-                 "#81FF00",
-                 "#89FF00",
-                 "#91FF00",
-                 "#99FF00",
-                 "#A1FF00",
-                 "#AAFF00",
-                 "#B2FF00",
-                 "#BAFF00",
-                 "#C2FF00",
-                 "#CAFF00",
-                 "#D2FF00",
-                 "#DAFF00",
-                 "#E2FF00",
-                 "#EAFF00",
-                 "#F2FF00",
-                 "#FAFF00",
-                 "#FFFA00",
-                 "#FFF200",
-                 "#FFEA00",
-                 "#FFE200",
-                 "#FFDA00",
-                 "#FFD200",
-                 "#FFCA00",
-                 "#FFC200",
-                 "#FFBA00",
-                 "#FFB200",
-                 "#FFAA00",
-                 "#FFA100",
-                 "#FF9900",
-                 "#FF9100",
-                 "#FF8900",
-                 "#FF8100",
-                 "#FF7900",
-                 "#FF7100",
-                 "#FF6900",
-                 "#FF6100",
-                 "#FF5900",
-                 "#FF5000",
-                 "#FF4800",
-                 "#FF4000",
-                 "#FF3800",
-                 "#FF3000",
-                 "#FF2800",
-                 "#FF2000",
-                 "#FF1800",
-                 "#FF1000",
-                 "#FF0800",
-                 "#FF0000"]
-
-
+# this is base pallette Minecraft uses, used with the multipliers
 basecolors = [(0, 0, 0, 0),
               (127, 178, 56),
               (247, 233, 163),
@@ -161,9 +97,17 @@ basecolors = [(0, 0, 0, 0),
               (142, 60, 46),
               (37, 22, 16)]
 
-# Setup the logger
-logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
+def multiplyColor(colorTuple, multiplier):
+    "calculates final color values using multiplier"
+    return tuple([math.floor(a * multiplier / 255.0) for a in colorTuple])
+
+
+# this a list of all possible colors a pixel can be on a map
+allColors = [multiplyColor(color, multiplier)
+             for color in basecolors for multiplier in multipliers]
+
+# convert dimension names to/from human readable
 dimDict = {-1: "nether",
            0: "overworld",
            1: "end",
@@ -171,6 +115,7 @@ dimDict = {-1: "nether",
            "overworld": 0,
            "end": 1}
 
+# same but for the dimension paths
 regionDict = {"region": 0,
               "DIM1/region": 1,
               "DIM-1/region": -1,
@@ -178,22 +123,17 @@ regionDict = {"region": 0,
               1: "DIM1/region",
               -1: "DIM-1/region"}
 
-banners = set()
-Banner = namedtuple("Banner", ["X", "Y", "Z", "name", "dimension", "color"])
-
 
 class LastUpdatedOrderedDict(OrderedDict):
     'Store items in the order the keys were last added'
-
     def __setitem__(self, key, value):
         if key in self:
             del self[key]
         OrderedDict.__setitem__(self, key, value)
 
-from collections import OrderedDict, Callable
 
 class DefaultOrderedDict(OrderedDict):
-    # Source: http://stackoverflow.com/a/6190500/562769
+    "Source: http://stackoverflow.com/a/6190500/562769"
     def __init__(self, default_factory=None, *a, **kw):
         if (default_factory is not None and
            not isinstance(default_factory, Callable)):
@@ -235,19 +175,23 @@ class DefaultOrderedDict(OrderedDict):
         return 'OrderedDefaultDict(%s, %s)' % (self.default_factory,
                                                OrderedDict.__repr__(self))
 
+
+# all the banners
+banners = set()
+
+# all the maps
 maps = DefaultOrderedDict(LastUpdatedOrderedDict)
 
-
-def multiplyColor(colorTuple, multiplier):
-    return tuple([math.floor(a * multiplier / 255.0) for a in colorTuple])
-
-
-allColors = [multiplyColor(color, multiplier)
-             for color in basecolors for multiplier in multipliers]
-
+# couple of structures to keep stuff
+BannerTuple = namedtuple("BannerTuple", ["X", "Y", "Z", "name", "dimension", "color"])
+MapTuple = namedtuple("MapTuple", ["name", "mapId", "epoch", "dimension", "mapTopLeft", "scale"])
 
 def getidHashes(outputFolder):
+    """Returns a dict of {latest updated map ID: hash}"""
+
+    # get all generated maps
     mapPngs = glob.glob(os.path.join(outputFolder, "map_*_*_*_*_*_*_*.png"))
+    
     idHashEpochs = []
     idHashes = OrderedDict()
 
@@ -257,35 +201,50 @@ def getidHashes(outputFolder):
         mapHash = filename[2]
         epoch = float(filename[3])
         idHashEpochs.append((mapId, mapHash, epoch))
+    
+    # sort the whole thing by epoch
     idHashEpochs.sort(key=operator.itemgetter(2))
 
     for idHashEpoch in idHashEpochs:
+        # this will only keep the latest map ids around for rendering
         idHashes[idHashEpoch[0]] = idHashEpoch[1]
-    #[print(a) for a in idHashes.items()]
+    
     return idHashes
 
-def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
-    os.makedirs(outputFolder, exist_ok=True)
 
+def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
+    """generate all the png files from leveldb"""
+
+    # mke sure the output exsists
+    os.makedirs(outputFolder, exist_ok=True)
+    
+    # get the current map data hashes
     idHashes = getidHashes(outputFolder)
 
-
+    # open leveldb
     db = leveldb.open(os.path.join(worldFolder, "db"))
+
+    # iterate over all the maps
     for a in tqdm(leveldb.iterate(db)):
         key = bytearray(a[0])
         if b"map" in key:
+            # get extract an nbt object
             mapNbtIo = BytesIO(a[1])
             mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
             mapNbt = mapNbtFile.root
             # print(mapNbt)
-
+            
+            # is the map unlimitedTracking?
             try:
                 mapUnlimitedTracking = mapNbt["unlimitedTracking"]
             except KeyError:
                 mapUnlimitedTracking = False
 
+            # skip if we didn't specify to include then on the cli
             if mapUnlimitedTracking and not unlimitedTracking:
                 continue
+            
+            # assign a bunch of stuff
             mapId = int(mapNbt["mapId"])
             mapScale = int(mapNbt["scale"])
             mapTime = now
@@ -293,34 +252,47 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
             mapZ = int(mapNbt["zCenter"])
             mapDim = int(mapNbt["dimension"])
             mapColors = mapNbt["colors"]
+
+            # got banners?
             try:
                 banners = mapNbt["banners"]
             except KeyError:
                 banners = []
+
+            # iterate over them
             for banner in banners:
+                # more assigning
                 X = banner["Pos"]["X"]
                 Y = banner["Pos"]["Y"]
                 Z = banner["Pos"]["Z"]
                 color = banner["Color"]
                 dim = dimDict[mapDim]
+            
                 try:
                     name = json.loads(banner["Name"])["text"]
-
                 except KeyError:
                     name = ""
+
                 bannerDict = {"X": X,
                               "Y": Y,
                               "Z": Z,
                               "color": color,
                               "name": name,
                               "dimension": dim}
-                bannerTuple = Banner(**bannerDict)
+
+                # buils a tuple and store it
+                bannerTuple = BannerTuple(**bannerDict)
                 banners.add(bannerTuple)
+
+            # create an image from the color data
             mapImage = Image.frombytes("RGBA", (128, 128),
                                        bytes([x % 256 for x in mapColors]),
                                        'raw')
+            # compute a hash of the data
             imageHash = hashlib.md5(mapImage.tobytes()).hexdigest()
 
+            # if we've never seen this data on this map id, then write out the
+            # file
             if (str(mapId), imageHash) not in idHashes.items() and imageHash != "fcd6bcb56c1689fcef28b57c22475bad":
                 filename = filenameFormat.format(mapId=mapId,
                                                  mapHash=imageHash,
@@ -329,14 +301,16 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
                                                  x=mapX,
                                                  z=mapZ,
                                                  dim=mapDim)
+                # scale the image based on the map zoom level
                 mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2)
                 # print(mapImage.size)
-
+                # save and close
                 mapImage.save(os.path.join(outputFolder, filename))
                 mapImage.close()
 
 
 def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
+    """generate png from map*.dat files"""
     mapDatFiles = glob.glob(os.path.join(worldFolder, "data/map_*.dat"))
     os.makedirs(outputFolder, exist_ok=True)
 
@@ -384,7 +358,7 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
                           "color": color,
                           "name": name,
                           "dimension": dim}
-            bannerTuple = Banner(**bannerDict)
+            bannerTuple = BannerTuple(**bannerDict)
             banners.add(bannerTuple)
         mapImage = Image.new("RGBA", (128, 128))
         mapImage.putdata(colorTuples)
@@ -409,12 +383,22 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
             mapImage.save(os.path.join(outputFolder, filename))
             mapImage.close()
 
+
 def mergeToLevel4(mapPngFolder, outputFolder):
-    mapTuple = namedtuple("mapTuple", ["name", "mapId", "epoch", "dimension", "mapTopLeft", "scale"])
+    """pastes all maps to render onto a intermediate zoom level 4 map"""
+    # what are we calling these crazy things
     filenameFormat = "merged_map_{dim}_{x}_{z}.png"
+    
+    # make sure the output exsists
     os.makedirs(outputFolder, exist_ok=True)
+
+    # this will hold all the maps, by dimension and associated zoom level 4 map
     level4Dict = defaultdict(lambda: defaultdict(list))
+
+    # get all the maps
     mapPngs = glob.glob(os.path.join(mapPngFolder, "map_*_*_*_*_*_*_*.png"))
+    
+    # iterate over all the maps
     for mapPng in mapPngs:
         name = os.path.basename(mapPng)
         (mapId,
@@ -424,24 +408,26 @@ def mergeToLevel4(mapPngFolder, outputFolder):
          x,
          z,
          scale) = name.strip("map_").strip(".png").split("_")
-
+        # change some types
         x = int(x)
         z = int(z)
         scale = int(scale)
         dim = int(dim)
         mapId = int(mapId)
         epoch = float(epoch)
+        
+        # convert the center of the map to the top left corner
         mapTopLeft = (x - 128 * 2 ** scale //
                       2 + 64, z - 128 * 2 ** scale // 2 + 64)
-        amap = mapTuple(name=name, mapId=mapId, epoch=epoch, dimension=dim, mapTopLeft=mapTopLeft, scale=scale)
+        # make a tuple out of it
+        amap = MapTuple(name=name, mapId=mapId, epoch=epoch, dimension=dim, mapTopLeft=mapTopLeft, scale=scale)
+        # figure out which level 4 map it belongs to
         level4Coords = (mapTopLeft[0] // 2048 * 2048,
                         mapTopLeft[1] // 2048 * 2048)
+        # throw it into a "dict"
         level4Dict[dim][level4Coords].append(amap)
-    """
-    mapPngList.sort(key=operator.itemgetter(2))
-    mapPngList.sort(key=operator.itemgetter(1))
-    mapPngList.sort(key=operator.itemgetter(6), reverse=True)
-    """
+    
+    # iterate over the level 4 buckets
     for dim in level4Dict.items():
         d = dim[0]
         for coords in tqdm(dim[1].items(), "level 4 of dim: {}".format(d)):
@@ -449,40 +435,55 @@ def mergeToLevel4(mapPngFolder, outputFolder):
             
             mapTuples = coords[1]
             
+            # sort them, import for the rendering order
             mapTuples.sort(key=lambda x: x.mapId)
             mapTuples.sort(key=lambda x: x.epoch)
             mapTuples.sort(key=lambda x: x.scale, reverse=True)
             
+            # create the level 4 images
             level4MapPng = Image.new("RGBA", (2048, 2048))
+            
+            # iterate over the maps in each bucket
             for mapTuple in mapTuples:
+                # get the map details
                 maps[(mapTuple.dimension, mapTuple.scale,
                       mapTuple.mapTopLeft[0],
                       mapTuple.mapTopLeft[1])].update({mapTuple.mapId: None})
                 mapPngCoords = (divmod(mapTuple.mapTopLeft[0], 2048)[1],
                                 divmod(mapTuple.mapTopLeft[1], 2048)[1])
+                # paste the image into the level 4 map
                 with Image.open(os.path.join(mapPngFolder, mapTuple.name)) as mapPng:
                     level4MapPng.paste(mapPng, mapPngCoords, mapPng)
                 #print(mapTuple)
-
+            # figure out the name of the file, and save it
             fileName = filenameFormat.format(dim=d, x=c[0], z=c[1]*-1)
 
             filePath = os.path.join(outputFolder, fileName)
             level4MapPng.save(filePath)
             level4MapPng.close()
 
+
 def genZoom17Tiles(level4MapFolder, outputFolder):
+    """generates lowest zoom level tiles from zcombined oom level 4 maps"""
+
+    # get all the level 4 maps 
     level4MapFilenames = glob.glob(os.path.join(level4MapFolder, "merged_map_*_*_*.png"))
+    # iterate over level4 maps
     for level4MapFilename in tqdm(level4MapFilenames, "level 4 -> zoom 17 tiles"):
+        # get some details
         name = os.path.basename(level4MapFilename)
         dim, x, z = name.strip("merged_map_").strip(".png").split("_")
         level4x = int(x)
         level4z = int(z)
         tilex = level4x // 2048
         tilez = level4z // 2048 * -1
+        # open the level 4 map
         with Image.open(level4MapFilename) as level4MapPng:
+            # this is pretty useless
             for zoom in range(17, 18):
                 numTiles = 2 ** (zoom - 13)
                 imageWidth = 2048 // numTiles
+                # do math
                 for numx in range(numTiles):
                     levelNumx = tilex * numTiles + numx
                     foldername = os.path.join(outputFolder, dim, str(zoom), str(levelNumx))
@@ -498,6 +499,7 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
                         tilePng = level4MapPng.crop(cropBox)
                         tilePng = tilePng.resize((256, 256))
                         tilePng.save(filename)
+
 
 def extrapolateZoom(tileFolder, level):
     zoom17Filenames = glob.glob(os.path.join(tileFolder, "*/{}/*/*.png".format(level + 1)))
@@ -523,115 +525,93 @@ def extrapolateZoom(tileFolder, level):
         tilePng.save(os.path.join(foldername, "{}.png".format(newTile[0][2])))
 
 
-def genBanners(bannerTupleList, outputFolder):
-    bannerJson = []
-    os.makedirs(outputFolder, exist_ok=True)
-    for d, banners in tqdm(bannerTupleList.items()):
-        for banner in tqdm(banners, "Generating banners"):
-
-            coords = "{} {} {}".format(str(banner["X"]),
-                                       str(banner["Y"]),
-                                       str(banner["Z"]))
-
-            name = re.subn("\[(.*?)\]", r"[\1](#\1)", banner["name"])[0]
-
-            POI = {"title": banner["name"],
-                   "x": banner["X"],
-                   "z": banner["Z"],
-                   "color": banner["color"],
-                   "d": d,
-                   "maplink": mapLinkFormat.format(x=banner["X"],
-                                                   y=banner["Y"],
-                                                   z=banner["Z"],
-                                                   d=d)}
-
-            #logging.info(POI)
-
-            bannerJson.append(POI)
-
-            #poiOverlays.add(poiOverlay(overlayId, x, z, False, "CENTER"))
-
-            bannerImage = Image.open(os.path.join("template", "banners-template", "{color}banner.png".format(color=banner["Color"])))
-
-            poiImage = Image.new("RGBA", (256, 64), (255, 255, 255, 0))
-            if banner["Name"]:
-                draw = ImageDraw.Draw(poiImage)
-                w, h = draw.textsize(banner["Name"], font=font)
-                #poiImage = poiImage.resize((w, 64))
-                draw = ImageDraw.Draw(poiImage)
-                textX = 127 - (w // 2)
-                textY = 34
-                draw.rectangle((textX, textY, textX + w, textY + h), fill=(0, 0, 0, 160))
-                draw.text((textX, textY), banner["Name"], font=font, fill=(255, 255, 255, 255))
-
-                poiImage.paste(bannerImage, (127 - 12, 0))
-            else:
-                #poiImage = poiImage.resize((24, 64))
-                poiImage.paste(bannerImage, (127 - 12, 0))
-
-
-            poiImage.save(os.path.join(outputFolder, banner["overlayId"] + ".png"))
-
-            #poiImages.append(dict(h=64, w=256, id=overlayId, src="../../{imageName}".format(imageName), title=coords, alt=coords))
-
 def genBannerMarkers(bannerList, outputFolder):
-    # print(bannerList)
+    """generate the banner.json file fram the banner list"""
     with open(os.path.join(outputFolder, "banners.json"), "+w", encoding="utf-8") as f:
         bannerList = [a._asdict() for a in bannerList]
         f.write(json.dumps(list(bannerList)))
 
 
 def getMcaFiles(worldFolder):
+    """create a list of dicts of mca files that includes name, age and dimension"""
     mcaList = []
+    # iterate over dimensions
     for dim in [-1, 0 ,1]:
+        # get all the mca files for a dimension
         mcaFiles = glob.glob(os.path.join(worldFolder, regionDict[dim], "*.mca" ))
+        # iterate over the mca files
         for mcaFile in mcaFiles:
+            # get some info about the files
             age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(mcaFile).st_mtime)
             name = mcaFile.rsplit("/")[-1]
             mca = {"name": name, "age": age.days, "dim": dim}
+            # add to list
             mcaList.append(mca)
             # print(mca)
     return mcaList
 
 
 def genKeepMcaFiles(banners):
+    """return list of mca files to keep based on marked banners"""
+    # a set that only keep unique regions
     keep = set()
+
+    # iterate over all the banners
     for banner in banners:
+        # get the region coordinates base on the banner coordinates
         X = banner.X >> 9
         Z = banner.Z >> 9
+        # and the dimension
         dim = dimDict[banner.dimension]
-        # print(Dim)
+        # add the region files within a 5 * 5 area of the region
         for Xkeep in range(X - 2, X + 3):
             for Zkeep in range(Z - 2, Z + 3):
                 keep.add((dim, Xkeep, Zkeep))
 
-    # print(keep)
     return keep
 
 
-def genMcaMarkers(mcaFileList, outputFolder, keepMcaFiles):
-    mcaList = []
+def genRegionMarkers(mcaFileList, outputFolder, keepMcaFiles):
+    regionList = []
     for mcaFile in mcaFileList:
         Xregion, Zregion = mcaFile["name"].split(".")[1:3]
-        X = int(Xregion) * 512
-        Z = int(Zregion) * 512
-        latlngs = [[Z, X], [Z + 512, X + 512]]
+        width = 512
+        X = int(Xregion) * width
+        Z = int(Zregion) * width
         age = mcaFile["age"]
-        dim = mcaFile["dim"]
-        mca = (int(dim), int(Xregion), int(Zregion))
-        if mca in keepMcaFiles:
-            color = "blue"
+        dimension = mcaFile["dim"]
+        filename = "{}/r.{}.{}.mca".format(regionDict[dimension], Xregion, Zregion) 
+        
+        if (dimension, Xregion, Zregion) in keepMcaFiles:
+            protected = True
         else:
-            if age >= 128:
-                color = "black"
-            else:
-                color = colorGradient[int(age / 128 * 64)]
-        mca = {"Filename": "{}/r.{}.{}.mca".format(regionDict[dim],
-        mca[1], mca[2]), "dimension": dimDict[dim], "latlngs": latlngs, "color": color}
-        mcaList.append(mca)
+            protected = False
 
-    with open(os.path.join(outputFolder, "mca.json"), "+w", encoding="utf-8") as f:
-        f.write(json.dumps(mcaList))
+        
+
+        TL = [X, Z]
+        TR = [X, Z + width]
+        BL = [X + width, Z + width]
+        BR = [X + width, Z]
+
+        coordinates = [[TL, TR, BL, BR, TL]]
+        
+        properties = {"protected": protected,
+                      "dimension": dimDict[dimension],
+                      "age": age,
+                      "filename": filename}
+        
+        geometry = {"type": "Polygon",
+                    "coordinates": coordinates}
+        
+        feature = {"type": "Feature",
+                   "properties": properties,
+                   "geometry": geometry}
+        
+        regionList.append(feature)
+        
+    with open(os.path.join(outputFolder, "regions.json"), "+w", encoding="utf-8") as f:
+        f.write(json.dumps(regionList))
 
 
 def genMapIdMarkers(maps, outputFolder):
@@ -666,14 +646,15 @@ def genMapIdMarkers(maps, outputFolder):
     with open(os.path.join(outputFolder, "maps.json"), "+w", encoding="utf-8") as f:
         f.write(json.dumps(mapsList))
 
+
 def copyTemplate(outputFolder, copytemplate):
     if not os.path.isdir(os.path.join(outputFolder, "assets")) or copytemplate:
         logging.info("Copying template to %s", outputFolder)
-        shutil.copytree(os.path.join(dir_path, "./template/assets"), os.path.join(outputFolder, "assets"))
-        shutil.copy(os.path.join(dir_path, "./template/index.html"), os.path.join(outputFolder))
+        distutils.dir_util.copy_tree(os.path.join(dir_path, "template"), outputFolder)
 
     else:
         logging.info("Assets folder found, not copying template")
+
 
 def main():
     parser = argparse.ArgumentParser(description='convert minecraft maps to the web')
@@ -685,28 +666,47 @@ def main():
     # get the args
     args = parser.parse_args()
 
+    # where to the maps go?
     mapsOutput = os.path.join(args.output, "maps")
+
+    # where to the tiles go?
     tileOutput = os.path.join(args.output, "tiles")
+    
+    # where to the merged zoom level 4 maps go?
     mergedMapsOutput = os.path.join(args.output, "merged-maps")
-    #bannersOutput = os.path.join(args.output, "banners")
+ 
+    # figure out if the input folder is java or bedrock
     if os.path.isdir(os.path.join(args.world, "db")):
+        # do the bedrock thing
         makeMapPngBedrock(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
     elif os.path.isdir(os.path.join(args.world, "data")):
+        # do the java thing, including generating extra json files for the markers
         makeMapPngJava(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
         mcaFilesList = getMcaFiles(args.world)
         keepMcaFiles = genKeepMcaFiles(banners)
-        genMcaMarkers(mcaFilesList, args.output, keepMcaFiles)
+        genRegionMarkers(mcaFilesList, args.output, keepMcaFiles)
     else:
         logging.info("Map data not found in %s", args.world)
         sys.exit(1)
-
+    # make the level 4 maps
     mergeToLevel4(mapsOutput, mergedMapsOutput)
+
+    # create the tiles for the lowest zoom level
     genZoom17Tiles(mergedMapsOutput, tileOutput)
+
+    # generate the rest of the zoom levels from level 17
     for zoom in range(16, -1, -1):
         extrapolateZoom(tileOutput, zoom)
+    
+    # make the banner markers
     genBannerMarkers(banners, args.output)
+
+    # make the maps info markers
     genMapIdMarkers(maps, args.output)
+    
+    # make sure the html and assets are present and copied
     copyTemplate(args.output, args.copytemplate)
+    
     logging.info("Done")
 
 
