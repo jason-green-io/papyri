@@ -8,7 +8,8 @@ import bedrock.leveldb as leveldb
 from PIL import ImageFont, Image, ImageDraw
 import math
 import operator
-from collections import Callable, defaultdict, OrderedDict, namedtuple
+from collections.abc import Callable
+from collections import defaultdict, OrderedDict, namedtuple
 from tqdm import tqdm
 import argparse
 import gzip
