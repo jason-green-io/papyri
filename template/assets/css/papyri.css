@@ -1,0 +1,36 @@
+
+html, body {
+        height: 100%;
+        margin: 0;
+}
+#map {
+        width: 100%;
+        height: 100%;
+}
+IMG.banner-image {
+     display: block;
+     margin-left: auto;
+     margin-right: auto;
+}
+
+@font-face {
+        font-family: "unifont";
+            src: url("../../assets/font/unifont-12.1.04.ttf");
+}
+@font-face {
+      font-family: "unifont-upper";
+        src: url("../../assets/font/unifont_upper-12.0.01.woff2");
+          unicode-range: U+10000-10FFFF;
+}
+
+.banner-name {
+        font-family: "unifont", "unifont-upper";
+        font-size: 16px;
+        color: white;
+        background-color: rgba(0, 0, 0, 0.5);
+
+}
+.banner-marker {
+        text-align: center;
+        white-space: pre;
+}
