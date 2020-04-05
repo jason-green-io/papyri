@@ -1,4 +1,4 @@
-# papyri version 1.0
+# papyri version 1.0.1
 
 Papyri is a Minecraft map item web presenter. It will show all maps and banners created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since many maps can be created of the same area, Papyri will prioritize rendering so that maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
 
@@ -23,8 +23,7 @@ usage: papyri.py [-h] --world WORLD [--includeunlimitedtracking] --output
 convert minecraft maps to the web
 optional arguments:
   -h, --help            show this help message and exit
-  --world WORLD         world folder or save folder (this is the folder
-                        level.dat is in)
+  --world WORLD         location of your world folder or save folder
   --includeunlimitedtracking
                         include maps that have unlimited tracking on, this
                         includes older maps from previous Minecraft versions

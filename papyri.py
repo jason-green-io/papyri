@@ -25,10 +25,10 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "1.0"
+__version__ = "1.0.1"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
-__status__ = "dev"
+__status__ = "release"
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -123,6 +123,45 @@ regionDict = {"region": 0,
               0: "region",
               1: "DIM1/region",
               -1: "DIM-1/region"}
+
+
+def findData(inputFolder):
+    dataDict = {}
+    dataDict["regions"] = {}
+    dataDict["maps"] = {}
+    
+    regionDict = {}
+    
+    folderTree = list(os.walk(inputFolder))
+    
+    regionFolders = [f for f in folderTree if f[0].endswith("/region")]
+    dataFolders = [f for f in folderTree if f[0].endswith("/data")]
+    
+    for folder in regionFolders:
+        mcaFiles = [os.path.join(folder[0],f) for f in folder[2] if f.endswith(".mca")]
+        if "DIM1" in folder[0]:
+            logging.info("Found End regions in %s", folder[0])
+            regionDict[1] = mcaFiles
+        elif "DIM-1" in folder[0]:
+            logging.info("Found Nether regions in %s", folder[0])
+            regionDict[-1] = mcaFiles
+        else:
+            logging.info("Found Overworld regions in %s", folder[0])
+            regionDict[0] = mcaFiles
+    
+    for folder in dataFolders:
+        mapFiles = [os.path.join(folder[0], f) for f in folder[2] if f.startswith("map_") and f.endswith(".dat")]
+        if "idcounts.dat" in folder[2]:
+            logging.info("Found maps in %s", folder[0])
+            dataDict["maps"] = mapFiles
+    
+    dataDict["regions"] = regionDict
+    
+    if not dataDict["maps"]:
+        logging.info("Didn't find any maps, did you specify the correct world location?")
+        sys.exit(1)
+    
+    return dataDict
 
 
 class LastUpdatedOrderedDict(OrderedDict):
@@ -310,9 +349,9 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
                 mapImage.close()
 
 
-def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
+def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
     """generate png from map*.dat files"""
-    mapDatFiles = glob.glob(os.path.join(worldFolder, "data/map_*.dat"))
+    #mapDatFiles = glob.glob(os.path.join(worldFolder, "data/map_*.dat"))
     os.makedirs(outputFolder, exist_ok=True)
 
     idHashes = getidHashes(outputFolder)
@@ -533,15 +572,13 @@ def genBannerMarkers(bannerList, outputFolder):
         f.write(json.dumps(list(bannerList)))
 
 
-def getMcaFiles(worldFolder):
+def getMcaFiles(regionDict):
     """create a list of dicts of mca files that includes name, age and dimension"""
     mcaList = []
     # iterate over dimensions
     for dim in [-1, 0 ,1]:
-        # get all the mca files for a dimension
-        mcaFiles = glob.glob(os.path.join(worldFolder, regionDict[dim], "*.mca" ))
         # iterate over the mca files
-        for mcaFile in mcaFiles:
+        for mcaFile in regionDict[dim]:
             # get some info about the files
             age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(mcaFile).st_mtime)
             name = mcaFile.rsplit("/")[-1]
@@ -659,7 +696,7 @@ def copyTemplate(outputFolder, copytemplate):
 
 def main():
     parser = argparse.ArgumentParser(description='convert minecraft maps to the web')
-    parser.add_argument('--world', help="world folder or save folder (this is the folder level.dat is in)", required=True)
+    parser.add_argument('--world', help="location of your world folder or save folder", required=True)
     parser.add_argument('--includeunlimitedtracking', help="include maps that have unlimited tracking on, this includes older maps from previous Minecraft versions and treasure maps in +1.13", action="store_true")
     parser.add_argument('--output', help="output path for web stuff", required=True)
     parser.add_argument('--copytemplate', help="copy default index.html and assets (do this if a new release changes the tempalte)", action="store_true")
@@ -680,15 +717,14 @@ def main():
     if os.path.isdir(os.path.join(args.world, "db")):
         # do the bedrock thing
         makeMapPngBedrock(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
-    elif os.path.isdir(os.path.join(args.world, "data")):
+    else:
         # do the java thing, including generating extra json files for the markers
-        makeMapPngJava(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
-        mcaFilesList = getMcaFiles(args.world)
+        dataDict = findData(args.world)
+        makeMapPngJava(dataDict["maps"], mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
+        mcaFilesList = getMcaFiles(dataDict["regions"])
         keepMcaFiles = genKeepMcaFiles(banners)
         genRegionMarkers(mcaFilesList, args.output, keepMcaFiles)
-    else:
-        logging.info("Map data not found in %s", args.world)
-        sys.exit(1)
+    
     # make the level 4 maps
     mergeToLevel4(mapsOutput, mergedMapsOutput)
 
