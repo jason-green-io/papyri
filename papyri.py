@@ -454,6 +454,9 @@ def mergeToLevel4(mapPngFolder, outputFolder):
         scale = int(scale)
         dim = int(dim)
         mapId = int(mapId)
+        if not dim in dimDict:
+            logging.info("Skipped map %s with invalid dimension.", mapId)
+            continue
         epoch = float(epoch)
         
         # convert the center of the map to the top left corner
@@ -698,6 +701,7 @@ def main():
     parser = argparse.ArgumentParser(description='convert minecraft maps to the web')
     parser.add_argument('--world', help="location of your world folder or save folder", required=True)
     parser.add_argument('--includeunlimitedtracking', help="include maps that have unlimited tracking on, this includes older maps from previous Minecraft versions and treasure maps in +1.13", action="store_true")
+    parser.add_argument('--overlaymca', help="generate the regionfile overlay (Java only)", action="store_true")
     parser.add_argument('--output', help="output path for web stuff", required=True)
     parser.add_argument('--copytemplate', help="copy default index.html and assets (do this if a new release changes the tempalte)", action="store_true")
 
@@ -721,9 +725,10 @@ def main():
         # do the java thing, including generating extra json files for the markers
         dataDict = findData(args.world)
         makeMapPngJava(dataDict["maps"], mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
-        mcaFilesList = getMcaFiles(dataDict["regions"])
-        keepMcaFiles = genKeepMcaFiles(banners)
-        genRegionMarkers(mcaFilesList, args.output, keepMcaFiles)
+        if args.overlaymca:
+            mcaFilesList = getMcaFiles(dataDict["regions"])
+            keepMcaFiles = genKeepMcaFiles(banners)
+            genRegionMarkers(mcaFilesList, args.output, keepMcaFiles)
     
     # make the level 4 maps
     mergeToLevel4(mapsOutput, mergedMapsOutput)
