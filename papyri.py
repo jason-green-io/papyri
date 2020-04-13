@@ -20,6 +20,7 @@ from io import BytesIO
 import sys
 import hashlib
 import time
+import struct
 
 __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
@@ -574,6 +575,31 @@ def genBannerMarkers(bannerList, outputFolder):
         bannerList = [a._asdict() for a in bannerList]
         f.write(json.dumps(list(bannerList)))
 
+def parseRegionHeader(regionFile):
+    with open(regionFile, "rb") as f:
+        header = f.read(8 * 1024)
+    filename = os.path.split(regionFile)[1]
+    
+    regionX, regionZ = filename.split(".")[1:3]
+
+    chunkOffsetsRaw = struct.iter_unpack('4s', header[0:4096])
+    timestampsRaw = struct.iter_unpack('>I', header[4096:])
+
+    chunkOffsets = []
+    timestamps =[datetime.datetime.fromtimestamp(t[0]) for t in timestampsRaw]
+
+    for each in chunkOffsetsRaw:
+        data = each[0]
+        data = data[0:3] + b'\x00' + data[3:]
+        chunkOffsets.append(struct.unpack('>IB', data))
+
+
+    for offset in range(0, 1024):
+        coords = divmod(offset, 32)
+        #logger.info("coords: %s timestamp: %s chunk: %s", coords, timestamps[offset], chunkOffsets[offset])
+
+    logging.info("%s, %s Highest: %s", regionX, regionZ, max(timestamps))
+    return max(timestamps)
 
 def getMcaFiles(regionDict):
     """create a list of dicts of mca files that includes name, age and dimension"""
@@ -583,7 +609,8 @@ def getMcaFiles(regionDict):
         # iterate over the mca files
         for mcaFile in regionDict[dim]:
             # get some info about the files
-            age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(mcaFile).st_mtime)
+            #age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(mcaFile).st_mtime)
+            age = datetime.datetime.now() - parseRegionHeader(mcaFile)
             name = mcaFile.rsplit("/")[-1]
             mca = {"name": name, "age": age.days, "dim": dim}
             # add to list
