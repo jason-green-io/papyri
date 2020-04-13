@@ -635,7 +635,6 @@ def genKeepMcaFiles(banners):
         for Xkeep in range(X - 2, X + 3):
             for Zkeep in range(Z - 2, Z + 3):
                 keep.add((dim, Xkeep, Zkeep))
-
     return keep
 
 
@@ -644,8 +643,12 @@ def genRegionMarkers(mcaFileList, outputFolder, keepMcaFiles):
     for mcaFile in mcaFileList:
         Xregion, Zregion = mcaFile["name"].split(".")[1:3]
         width = 512
-        X = int(Xregion) * width
-        Z = int(Zregion) * width
+        Xregion = int(Xregion)
+        Zregion = int(Zregion)
+        
+        X = Xregion * width
+        Z = Zregion * width
+        
         age = mcaFile["age"]
         dimension = mcaFile["dim"]
         filename = "{}/r.{}.{}.mca".format(regionDict[dimension], Xregion, Zregion) 
