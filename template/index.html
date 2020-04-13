@@ -123,9 +123,12 @@
     		}
                 
     styleRegions = { style: function (feature) {
-		  				return {color: regionGradient[feature.properties.age]}
+                        if(feature.properties.protected) {
+                            return {color: "#ffff00"}
+                        } else {
+		  				    return {color: regionGradient[feature.properties.age]}
 						}
-    		}
+    		       }}
 
     overworldBanners = L.markerClusterGroup(clusterGroupConfig);
     netherBanners = L.markerClusterGroup(clusterGroupConfig);
