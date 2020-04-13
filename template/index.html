@@ -71,6 +71,7 @@
 
     const IDcolors = ["red", "blue", "green", "purple", "orange"];
     const scaleText = ["1:1", "1:2", "1:4", "1:8", "1:16"]
+    const regionGradient = ["#fb0004","#f70008","#f3000c","#ef0010","#eb0014","#e70018","#e4001b","#e0001f","#dc0023","#d80027","#d4002b","#d0002f","#cc0033","#c80037","#c4003b","#c0003f","#bc0043","#b80047","#b4004b","#b1004e","#ad0052","#a90056","#a5005a","#a1005e","#9d0062","#990066","#95006a","#91006e","#8d0072","#890076","#85007a","#81007e","#7e0081","#7a0085","#760089","#72008d","#6e0091","#6a0095","#660099","#62009d","#5e00a1","#5a00a5","#5600a9","#5200ad","#4e00b1","#4b00b4","#4700b8","#4300bc","#3f00c0","#3b00c4","#3700c8","#3300cc","#2f00d0","#2b00d4","#2700d8","#2300dc","#1f00e0","#1b00e4","#1800e7","#1400eb","#1000ef","#0c00f3","#0800f7","#0400fb"];
 
     map = L.map('map', {
 		crs: L.CRS.pr,
@@ -115,24 +116,25 @@
 			map.openPopup(html, e.latlng);
 		}
 	}
-
-    overworldBanners = L.markerClusterGroup(clusterGroupConfig);
-    netherBanners = L.markerClusterGroup(clusterGroupConfig);
-    endBanners = L.markerClusterGroup(clusterGroupConfig);
     
-    overworldRegions = L.geoJSON();
-    netherRegions = L.geoJSON();
-    endRegions = L.geoJSON();
-
     styleMaps = { style: function (feature) {
 		  				return {color: IDcolors[feature.properties.scale]}
 						}
     		}
                 
     styleRegions = { style: function (feature) {
-		  				return {color: IDcolors[feature.properties.scale]}
+		  				return {color: regionGradient[feature.properties.age]}
 						}
     		}
+
+    overworldBanners = L.markerClusterGroup(clusterGroupConfig);
+    netherBanners = L.markerClusterGroup(clusterGroupConfig);
+    endBanners = L.markerClusterGroup(clusterGroupConfig);
+    
+    overworldRegions = L.geoJSON(null, styleRegions);
+    netherRegions = L.geoJSON(null, styleRegions);
+    endRegions = L.geoJSON(null, styleRegions);
+
 
     overworldMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
     netherMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
