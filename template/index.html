@@ -122,21 +122,15 @@
 						}
     		}
                 
-    styleRegions = { style: function (feature) {
-                        if(feature.properties.protected) {
-                            return {color: "#ffff00"}
-                        } else {
-		  				    return {color: regionGradient[feature.properties.age]}
-						}
-    		       }}
 
-    overworldBanners = L.markerClusterGroup(clusterGroupConfig);
+    
+	overworldBanners = L.markerClusterGroup(clusterGroupConfig);
     netherBanners = L.markerClusterGroup(clusterGroupConfig);
     endBanners = L.markerClusterGroup(clusterGroupConfig);
     
-    overworldRegions = L.geoJSON(null, styleRegions);
-    netherRegions = L.geoJSON(null, styleRegions);
-    endRegions = L.geoJSON(null, styleRegions);
+    overworldCustom = L.geoJSON();
+    netherCustom = L.geoJSON();
+    endCustom = L.geoJSON();
 
 
     overworldMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
@@ -147,20 +141,20 @@
 
     overworldOverlays = {
         "banners": overworldBanners,
-        "regions": overworldRegions,
-        "ids": overworldMaps
+        "maps": overworldMaps,
+        "custom": overworldCustom,
         };
 
     netherOverlays = {
         "banners": netherBanners,
-        "regions": netherRegions,
-        "ids": netherMaps
+        "maps": netherMaps,
+        "custom": netherCustom,
         };
 
     endOverlays = {
         "banners": endBanners,
-        "regions": endRegions,
-        "ids": endMaps
+        "maps": endMaps,
+        "custom": endCustom,
         };
     
     allOverlays = {
@@ -174,11 +168,11 @@
         "N": nether,
         "E": end,
         "OB": overworldBanners,
-        "OR": overworldRegions,
+        "OC": overworldCustom,
         "NB": netherBanners,
-        "NR": netherRegions,
+        "NC": netherCustom,
         "EB": endBanners,
-        "ER": endRegions,
+        "EC": endCustom,
         "OI": overworldMaps,
         "NI": netherMaps,
         "EI": endMaps
@@ -197,9 +191,9 @@
         overworldBanners.remove();
         netherBanners.remove();
         endBanners.remove();
-        overworldRegions.remove();
-        netherRegions.remove();
-        endRegions.remove();
+        overworldCustom.remove();
+        netherCustom.remove();
+        endCustom.remove();
         overworldMaps.remove();
         netherMaps.remove();
         endMaps.remove();
@@ -250,12 +244,12 @@
 	    };
     });
         
-    loadJSON('regions.json', function(response) {
+    loadJSON('custom.json', function(response) {
         // Parse JSON string into object
         markers = JSON.parse(response);
 
         for ( var i=0; i < markers.length; ++i ) {
-            allOverlays[markers[i].properties.dimension]['regions'].addData(markers[i]);
+            allOverlays[markers[i].properties.dimension]['custom'].addData(markers[i]);
         };
     });
     
@@ -265,7 +259,7 @@
         markers = JSON.parse(response);
 
         for ( var i=0; i < markers.length; ++i ) {
-            allOverlays[markers[i].properties.dimension]['ids'].addData(markers[i]);
+            allOverlays[markers[i].properties.dimension]['maps'].addData(markers[i]);
         };
     });
 </script>
