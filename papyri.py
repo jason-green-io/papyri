@@ -126,43 +126,25 @@ regionDict = {"region": 0,
               -1: "DIM-1/region"}
 
 
-def findData(inputFolder):
-    dataDict = {}
-    dataDict["regions"] = {}
-    dataDict["maps"] = {}
-    
-    regionDict = {}
+def findMapFiles(inputFolder):
+    mapFiles = []
     
     folderTree = list(os.walk(inputFolder))
     
-    regionFolders = [f for f in folderTree if f[0].endswith("/region")]
     dataFolders = [f for f in folderTree if f[0].endswith("/data")]
     
-    for folder in regionFolders:
-        mcaFiles = [os.path.join(folder[0],f) for f in folder[2] if f.endswith(".mca")]
-        if "DIM1" in folder[0]:
-            logging.info("Found End regions in %s", folder[0])
-            regionDict[1] = mcaFiles
-        elif "DIM-1" in folder[0]:
-            logging.info("Found Nether regions in %s", folder[0])
-            regionDict[-1] = mcaFiles
-        else:
-            logging.info("Found Overworld regions in %s", folder[0])
-            regionDict[0] = mcaFiles
-    
     for folder in dataFolders:
-        mapFiles = [os.path.join(folder[0], f) for f in folder[2] if f.startswith("map_") and f.endswith(".dat")]
+        maybeMapFiles = [os.path.join(folder[0], f) for f in folder[2] if f.startswith("map_") and f.endswith(".dat")]
         if "idcounts.dat" in folder[2]:
-            logging.info("Found maps in %s", folder[0])
-            dataDict["maps"] = mapFiles
+            logging.info("Found %s maps in %s", len(maybeMapFiles), folder[0])
+            mapFiles = maybeMapFiles
     
-    dataDict["regions"] = regionDict
     
-    if not dataDict["maps"]:
+    if not mapFiles:
         logging.info("Didn't find any maps, did you specify the correct world location?")
         sys.exit(1)
     
-    return dataDict
+    return mapFiles
 
 
 class LastUpdatedOrderedDict(OrderedDict):
@@ -266,7 +248,7 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
     db = leveldb.open(os.path.join(worldFolder, "db"))
 
     # iterate over all the maps
-    for a in tqdm(leveldb.iterate(db)):
+    for a in tqdm(leveldb.iterate(db), bar_format="{l_bar}{bar}"):
         key = bytearray(a[0])
         if b"map" in key:
             # get extract an nbt object
@@ -357,7 +339,7 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
 
     idHashes = getidHashes(outputFolder)
 
-    for mapDatFile in tqdm(mapDatFiles, "map_*.dat nbt -> png"):
+    for mapDatFile in tqdm(mapDatFiles, "map_*.dat nbt -> png".ljust(24), bar_format="{l_bar}{bar}"):
         mapNbtFile = nbtlib.load(mapDatFile)
         mapNbt = mapNbtFile.root
         # print(mapNbt["data"])
@@ -425,6 +407,7 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
             mapImage.close()
 
     logging.info("Found %s banners", len(banners))
+
 def mergeToLevel4(mapPngFolder, outputFolder):
     """pastes all maps to render onto a intermediate zoom level 4 map"""
     # what are we calling these crazy things
@@ -474,7 +457,7 @@ def mergeToLevel4(mapPngFolder, outputFolder):
     # iterate over the level 4 buckets
     for dim in level4Dict.items():
         d = dim[0]
-        for coords in tqdm(dim[1].items(), "level 4 of dim: {}".format(d)):
+        for coords in tqdm(dim[1].items(), "level 4 of dim: {}".format(d).ljust(24), bar_format="{l_bar}{bar}"):
             c = coords[0]
             
             mapTuples = coords[1]
@@ -513,7 +496,7 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
     # get all the level 4 maps 
     level4MapFilenames = glob.glob(os.path.join(level4MapFolder, "merged_map_*_*_*.png"))
     # iterate over level4 maps
-    for level4MapFilename in tqdm(level4MapFilenames, "level 4 -> zoom 17 tiles"):
+    for level4MapFilename in tqdm(level4MapFilenames, "level 4 -> zoom 17 tiles", bar_format="{l_bar}{bar}"):
         # get some details
         name = os.path.basename(level4MapFilename)
         dim, x, z = name.strip("merged_map_").strip(".png").split("_")
@@ -555,7 +538,7 @@ def extrapolateZoom(tileFolder, level):
         xnew, xq = divmod(x, 2)
         ynew, yq = divmod(y, 2)
         newZoomDict[(dim, xnew, ynew)].append((xq, yq, filename))
-    for newTile in tqdm(newZoomDict.items(), "zoom {} tiles".format(level)):
+    for newTile in tqdm(newZoomDict.items(), "zoom {} tiles".format(level).ljust(24), bar_format="{l_bar}{bar}"):
         foldername = os.path.join(tileFolder, "{}/{}/{}".format(newTile[0][0], level, newTile[0][1]))
         tilePng = Image.new("RGBA", (512,512))
         for previousTile in newTile[1]:
@@ -575,115 +558,6 @@ def genBannerMarkers(bannerList, outputFolder):
         bannerList = [a._asdict() for a in bannerList]
         f.write(json.dumps(list(bannerList)))
 
-def parseRegionHeader(regionFile):
-    with open(regionFile, "rb") as f:
-        header = f.read(8 * 1024)
-    filename = os.path.split(regionFile)[1]
-    
-    regionX, regionZ = filename.split(".")[1:3]
-
-    chunkOffsetsRaw = struct.iter_unpack('4s', header[0:4096])
-    timestampsRaw = struct.iter_unpack('>I', header[4096:])
-
-    chunkOffsets = []
-    timestamps =[datetime.datetime.fromtimestamp(t[0]) for t in timestampsRaw]
-
-    for each in chunkOffsetsRaw:
-        data = each[0]
-        data = data[0:3] + b'\x00' + data[3:]
-        chunkOffsets.append(struct.unpack('>IB', data))
-
-
-    for offset in range(0, 1024):
-        coords = divmod(offset, 32)
-        #logger.info("coords: %s timestamp: %s chunk: %s", coords, timestamps[offset], chunkOffsets[offset])
-
-    logging.info("%s, %s Highest: %s", regionX, regionZ, max(timestamps))
-    return max(timestamps)
-
-def getMcaFiles(regionDict):
-    """create a list of dicts of mca files that includes name, age and dimension"""
-    mcaList = []
-    # iterate over dimensions
-    for dim in [-1, 0 ,1]:
-        # iterate over the mca files
-        for mcaFile in regionDict[dim]:
-            # get some info about the files
-            #age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(mcaFile).st_mtime)
-            age = datetime.datetime.now() - parseRegionHeader(mcaFile)
-            name = mcaFile.rsplit("/")[-1]
-            mca = {"name": name, "age": age.days, "dim": dim}
-            # add to list
-            mcaList.append(mca)
-            # print(mca)
-    return mcaList
-
-
-def genKeepMcaFiles(banners):
-    """return list of mca files to keep based on marked banners"""
-    # a set that only keep unique regions
-    keep = set()
-
-    # iterate over all the banners
-    for banner in banners:
-        # get the region coordinates base on the banner coordinates
-        X = banner.X >> 9
-        Z = banner.Z >> 9
-        # and the dimension
-        dim = dimDict[banner.dimension]
-        # add the region files within a 5 * 5 area of the region
-        for Xkeep in range(X - 2, X + 3):
-            for Zkeep in range(Z - 2, Z + 3):
-                keep.add((dim, Xkeep, Zkeep))
-    return keep
-
-
-def genRegionMarkers(mcaFileList, outputFolder, keepMcaFiles):
-    regionList = []
-    for mcaFile in mcaFileList:
-        Xregion, Zregion = mcaFile["name"].split(".")[1:3]
-        width = 512
-        Xregion = int(Xregion)
-        Zregion = int(Zregion)
-        
-        X = Xregion * width
-        Z = Zregion * width
-        
-        age = mcaFile["age"]
-        dimension = mcaFile["dim"]
-        filename = "{}/r.{}.{}.mca".format(regionDict[dimension], Xregion, Zregion) 
-        
-        if (dimension, Xregion, Zregion) in keepMcaFiles:
-            protected = True
-        else:
-            protected = False
-
-        
-
-        TL = [X, Z]
-        TR = [X, Z + width]
-        BL = [X + width, Z + width]
-        BR = [X + width, Z]
-
-        coordinates = [[TL, TR, BL, BR, TL]]
-        
-        properties = {"protected": protected,
-                      "dimension": dimDict[dimension],
-                      "age": age,
-                      "filename": filename}
-        
-        geometry = {"type": "Polygon",
-                    "coordinates": coordinates}
-        
-        feature = {"type": "Feature",
-                   "properties": properties,
-                   "geometry": geometry}
-        
-        regionList.append(feature)
-        
-    with open(os.path.join(outputFolder, "regions.json"), "+w", encoding="utf-8") as f:
-        f.write(json.dumps(regionList))
-
 
 def genMapIdMarkers(maps, outputFolder):
     mapsList = []
@@ -701,13 +575,14 @@ def genMapIdMarkers(maps, outputFolder):
         BR = [X + width, Z]
 
         coordinates = [[TL, TR, BL, BR, TL]]
-        
+        style = {"fill":"black"} 
         properties = {"scale": scale,
                       "dimension": dimDict[dimension],
                       "IDs": ",".join([str(x) for x in amap[1].keys()]) }
         
         geometry = {"type": "Polygon",
-                    "coordinates": coordinates}
+                    "coordinates": coordinates
+                    "style": style}
         
         feature = {"type": "Feature",
                    "properties": properties,
@@ -753,8 +628,8 @@ def main():
         makeMapPngBedrock(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
     else:
         # do the java thing, including generating extra json files for the markers
-        dataDict = findData(args.world)
-        makeMapPngJava(dataDict["maps"], mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
+        mapFiles = findMapFiles(args.world)
+        makeMapPngJava(mapFiles, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
         #if args.overlaymca:
         #    mcaFilesList = getMcaFiles(dataDict["regions"])
         #    keepMcaFiles = genKeepMcaFiles(banners)

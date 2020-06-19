@@ -122,16 +122,17 @@
 						}
     		}
                 
+    styleCustom = { style: function (feature) {
+        return feature.properties.style
+    }}
 
-    
-	overworldBanners = L.markerClusterGroup(clusterGroupConfig);
+    overworldBanners = L.markerClusterGroup(clusterGroupConfig);
     netherBanners = L.markerClusterGroup(clusterGroupConfig);
     endBanners = L.markerClusterGroup(clusterGroupConfig);
-    
-    overworldCustom = L.geoJSON();
-    netherCustom = L.geoJSON();
-    endCustom = L.geoJSON();
 
+    overworldCustom = L.geoJSON(null, styleCustom);
+    netherCustom = L.geoJSON(null, styleCustom);
+    endCustom = L.geoJSON(null, styleCustom);
 
     overworldMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
     netherMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
