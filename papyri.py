@@ -117,21 +117,13 @@ dimDict = {-1: "nether",
            "overworld": 0,
            "end": 1}
 
-# same but for the dimension paths
-regionDict = {"region": 0,
-              "DIM1/region": 1,
-              "DIM-1/region": -1,
-              0: "region",
-              1: "DIM1/region",
-              -1: "DIM-1/region"}
-
 
 def findMapFiles(inputFolder):
     mapFiles = []
     
     folderTree = list(os.walk(inputFolder))
     
-    dataFolders = [f for f in folderTree if f[0].endswith("/data")]
+    dataFolders = [f for f in folderTree if f[0].endswith(os.sep + "data")]
     
     for folder in dataFolders:
         maybeMapFiles = [os.path.join(folder[0], f) for f in folder[2] if f.startswith("map_") and f.endswith(".dat")]
@@ -219,7 +211,7 @@ def getidHashes(outputFolder):
     idHashes = OrderedDict()
 
     for filename in mapPngs:
-        filename = filename.split("/")[-1].split("_")
+        filename = os.path.split(filename)[-1].split("_")
         mapId = filename[1]
         mapHash = filename[2]
         epoch = float(filename[3])
@@ -334,7 +326,7 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
 
 def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
     """generate png from map*.dat files"""
-    #mapDatFiles = glob.glob(os.path.join(worldFolder, "data/map_*.dat"))
+    
     os.makedirs(outputFolder, exist_ok=True)
 
     idHashes = getidHashes(outputFolder)
@@ -407,6 +399,7 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
             mapImage.close()
 
     logging.info("Found %s banners", len(banners))
+
 
 def mergeToLevel4(mapPngFolder, outputFolder):
     """pastes all maps to render onto a intermediate zoom level 4 map"""
@@ -529,17 +522,18 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
 
 
 def extrapolateZoom(tileFolder, level):
-    zoom17Filenames = glob.glob(os.path.join(tileFolder, "*/{}/*/*.png".format(level + 1)))
+    zoom17Filenames = glob.glob(os.path.join(tileFolder, "*", str(level + 1), "*", "*.png"))
     newZoomDict = defaultdict(list)
     for filename in zoom17Filenames:
-        dim, zoom, x, y = filename.strip(tileFolder).strip(".png").split("/")
+        tilePath = os.path.relpath(filename, tileFolder)
+        dim, zoom, x, y = tilePath.strip(".png").split(os.sep)
         x = int(x)
         y = int(y)
         xnew, xq = divmod(x, 2)
         ynew, yq = divmod(y, 2)
         newZoomDict[(dim, xnew, ynew)].append((xq, yq, filename))
     for newTile in tqdm(newZoomDict.items(), "zoom {} tiles".format(level).ljust(24), bar_format="{l_bar}{bar}"):
-        foldername = os.path.join(tileFolder, "{}/{}/{}".format(newTile[0][0], level, newTile[0][1]))
+        foldername = os.path.join(tileFolder, str(newTile[0][0]), str(level), str(newTile[0][1]))
         tilePng = Image.new("RGBA", (512,512))
         for previousTile in newTile[1]:
             topLeft = (previousTile[0] * 256, previousTile[1] * 256)
@@ -575,14 +569,12 @@ def genMapIdMarkers(maps, outputFolder):
         BR = [X + width, Z]
 
         coordinates = [[TL, TR, BL, BR, TL]]
-        style = {"fill":"black"} 
         properties = {"scale": scale,
                       "dimension": dimDict[dimension],
                       "IDs": ",".join([str(x) for x in amap[1].keys()]) }
         
         geometry = {"type": "Polygon",
-                    "coordinates": coordinates
-                    "style": style}
+                    "coordinates": coordinates}
         
         feature = {"type": "Feature",
                    "properties": properties,
