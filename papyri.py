@@ -111,15 +111,15 @@ allColors = [multiplyColor(color, multiplier)
              for color in basecolors for multiplier in multipliers]
 
 # convert dimension names to/from human readable
-dimDict = {-1: "nether",
-           0: "overworld",
-           1: "end",
-           "minecraft:overworld": 0,
-           "minecraft:nether": 1,
-           "minecraft:end": -1,
-           "nether": -1,
-           "overworld": 0,
-           "end": 1}
+dimDict = {"-1": "nether",
+           "0": "overworld",
+           "1": "end",
+           "minecraft:overworld": "0",
+           "minecraft:nether": "1",
+           "minecraft:end": "-1",
+           "nether": "-1",
+           "overworld": "0",
+           "end": "1"}
 
 
 def scaleImage(image, factor):
@@ -278,7 +278,7 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
             mapTime = now
             mapX = int(mapNbt["xCenter"])
             mapZ = int(mapNbt["zCenter"])
-            mapDim = int(mapNbt["dimension"])
+            mapDim = mapNbt["dimension"]
             mapColors = mapNbt["colors"]
 
             # got banners?
@@ -359,7 +359,7 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
         mapScale = int(mapNbt["data"]["scale"])
         mapX = int(mapNbt["data"]["xCenter"])
         mapZ = int(mapNbt["data"]["zCenter"])
-        mapDim = int(mapNbt["data"]["dimension"])
+        mapDim = mapNbt["data"]["dimension"]
         mapColors = mapNbt["data"]["colors"]
         colorTuples = [allColors[x % 256] for x in mapColors]
 
