@@ -115,8 +115,8 @@ dimDict = {-1: "nether",
            0: "overworld",
            1: "end",
            "minecraft:overworld": 0,
-           "minecraft:nether": 1,
-           "minecraft:end": -1,
+           "minecraft:end": 1,
+           "minecraft:nether": -1,
            "nether": -1,
            "overworld": 0,
            "end": 1}
@@ -362,7 +362,10 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
         mapScale = int(mapNbt["data"]["scale"])
         mapX = int(mapNbt["data"]["xCenter"])
         mapZ = int(mapNbt["data"]["zCenter"])
-        mapDim = str(mapNbt["data"]["dimension"])
+        try:
+            mapDim = str(mapNbt["data"]["dimension"])
+        except:
+            mapDim = int(mapNbt["data"]["dimension"])
         mapColors = mapNbt["data"]["colors"]
         colorTuples = [allColors[x % 256] for x in mapColors]
 
