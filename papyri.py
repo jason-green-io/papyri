@@ -278,7 +278,7 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
             mapTime = now
             mapX = int(mapNbt["xCenter"])
             mapZ = int(mapNbt["zCenter"])
-            mapDim = mapNbt["dimension"]
+            mapDim = str(mapNbt["dimension"])
             mapColors = mapNbt["colors"]
 
             # got banners?
@@ -359,7 +359,7 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
         mapScale = int(mapNbt["data"]["scale"])
         mapX = int(mapNbt["data"]["xCenter"])
         mapZ = int(mapNbt["data"]["zCenter"])
-        mapDim = mapNbt["data"]["dimension"]
+        mapDim = str(mapNbt["data"]["dimension"])
         mapColors = mapNbt["data"]["colors"]
         colorTuples = [allColors[x % 256] for x in mapColors]
 
@@ -374,7 +374,7 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
             Y = int(banner["Pos"]["Y"])
             Z = int(banner["Pos"]["Z"])
             color = banner["Color"]
-            dim = dimDict[mapDim]
+            dim = str(dimDict[mapDim])
             try:
                 name = json.loads(banner["Name"])["text"]
 
