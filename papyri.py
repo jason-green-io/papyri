@@ -114,6 +114,9 @@ allColors = [multiplyColor(color, multiplier)
 dimDict = {-1: "nether",
            0: "overworld",
            1: "end",
+           "minecraft:overworld": 0,
+           "minecraft:nether": 1,
+           "minecraft:end": -1,
            "nether": -1,
            "overworld": 0,
            "end": 1}
