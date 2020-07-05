@@ -27,7 +27,7 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "1.0.1"
+__version__ = "1.1"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
 __status__ = "release"
@@ -130,7 +130,6 @@ def scaleImage(image, factor):
     return Image.fromarray(b)
 
 
-
 def findMapFiles(inputFolder):
     mapFiles = []
     
@@ -143,7 +142,6 @@ def findMapFiles(inputFolder):
         if "idcounts.dat" in folder[2]:
             logging.info("Found %s maps in %s", len(maybeMapFiles), folder[0])
             mapFiles = maybeMapFiles
-    
     
     if not mapFiles:
         logging.info("Didn't find any maps, did you specify the correct world location?")
@@ -640,13 +638,9 @@ def main():
         # do the bedrock thing
         makeMapPngBedrock(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
     else:
-        # do the java thing, including generating extra json files for the markers
+        # do the java thing
         mapFiles = findMapFiles(args.world)
         makeMapPngJava(mapFiles, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
-        #if args.overlaymca:
-        #    mcaFilesList = getMcaFiles(dataDict["regions"])
-        #    keepMcaFiles = genKeepMcaFiles(banners)
-        #    genRegionMarkers(mcaFilesList, args.output, keepMcaFiles)
     
     # make the level 4 maps
     mergeToLevel4(mapsOutput, mergedMapsOutput)
