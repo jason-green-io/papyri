@@ -111,15 +111,15 @@ allColors = [multiplyColor(color, multiplier)
              for color in basecolors for multiplier in multipliers]
 
 # convert dimension names to/from human readable
-dimDict = {"-1": "nether",
-           "0": "overworld",
-           "1": "end",
-           "minecraft:overworld": "0",
-           "minecraft:nether": "1",
-           "minecraft:end": "-1",
-           "nether": "-1",
-           "overworld": "0",
-           "end": "1"}
+dimDict = {-1: "nether",
+           0: "overworld",
+           1: "end",
+           "minecraft:overworld": 0,
+           "minecraft:nether": 1,
+           "minecraft:end": -1,
+           "nether": -1,
+           "overworld": 0,
+           "end": 1}
 
 
 def scaleImage(image, factor):
@@ -278,7 +278,10 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
             mapTime = now
             mapX = int(mapNbt["xCenter"])
             mapZ = int(mapNbt["zCenter"])
-            mapDim = str(mapNbt["dimension"])
+            try:
+                mapDim = int(mapNbt["dimension"])
+            except:
+                mapDim = str(mapNbt["dimension"])
             mapColors = mapNbt["colors"]
 
             # got banners?
@@ -374,7 +377,10 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
             Y = int(banner["Pos"]["Y"])
             Z = int(banner["Pos"]["Z"])
             color = banner["Color"]
-            dim = str(dimDict[mapDim])
+            try:
+                mapDim = int(mapNbt["dimension"])
+            except:
+                mapDim = str(mapNbt["dimension"])
             try:
                 name = json.loads(banner["Name"])["text"]
 
