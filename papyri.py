@@ -21,6 +21,7 @@ import sys
 import hashlib
 import time
 import struct
+import numpy as np
 
 __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
@@ -116,6 +117,15 @@ dimDict = {-1: "nether",
            "nether": -1,
            "overworld": 0,
            "end": 1}
+
+
+def scaleImage(image, factor):
+    a = np.array(image)
+
+    #logging.info("Scaling %s %s new %s %s factor %s", W, H, newW, newH, factor)
+    b = a.repeat(factor,axis=0).repeat(factor,axis=1)
+    return Image.fromarray(b)
+
 
 
 def findMapFiles(inputFolder):
@@ -317,7 +327,7 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
                                                  z=mapZ,
                                                  dim=mapDim)
                 # scale the image based on the map zoom level
-                mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2)
+                mapImage = scaleImage(mapImage, 2 ** mapScale)
                 # print(mapImage.size)
                 # save and close
                 mapImage.save(os.path.join(outputFolder, filename))
@@ -386,7 +396,7 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
             mapTime = now
 
         if (str(mapId), imageHash) not in idHashes.items() and imageHash != "fcd6bcb56c1689fcef28b57c22475bad":
-            mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2)
+            mapImage = scaleImage(mapImage, 2 ** mapScale)
             filename = filenameFormat.format(mapId=mapId,
                                              mapHash=imageHash,
                                              epoch=mapTime,
@@ -517,7 +527,7 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
                         filename = os.path.join(foldername, str(levelNumz) + ".png")
                         #print(filename, cropBox )
                         tilePng = level4MapPng.crop(cropBox)
-                        tilePng = tilePng.resize((256, 256))
+                        tilePng = scaleImage(tilePng, 2)
                         tilePng.save(filename)
 
 
