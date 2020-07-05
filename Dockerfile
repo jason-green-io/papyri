@@ -7,7 +7,7 @@ RUN apt-get update \
     rsyslog \
   && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir tqdm nbtlib Pillow
+RUN pip3 install --no-cache-dir tqdm nbtlib Pillow numpy
 
 COPY . /papyri
 
