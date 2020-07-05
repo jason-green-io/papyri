@@ -114,9 +114,9 @@ allColors = [multiplyColor(color, multiplier)
 dimDict = {-1: "nether",
            0: "overworld",
            1: "end",
-           "minecraft:overworld": 0,
-           "minecraft:end": 1,
-           "minecraft:nether": -1,
+           '"minecraft:overworld"': 0,
+           '"minecraft:end"': 1,
+           '"minecraft:nether"': -1,
            "nether": -1,
            "overworld": 0,
            "end": 1}
@@ -363,9 +363,9 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
         mapX = int(mapNbt["data"]["xCenter"])
         mapZ = int(mapNbt["data"]["zCenter"])
         try:
-            mapDim = str(mapNbt["data"]["dimension"])
-        except:
             mapDim = int(mapNbt["data"]["dimension"])
+        except:
+            mapDim = str(mapNbt["data"]["dimension"])
         mapColors = mapNbt["data"]["colors"]
         colorTuples = [allColors[x % 256] for x in mapColors]
 
@@ -380,15 +380,14 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
             Y = int(banner["Pos"]["Y"])
             Z = int(banner["Pos"]["Z"])
             color = banner["Color"]
-            try:
-                mapDim = int(mapNbt["dimension"])
-            except:
-                mapDim = str(mapNbt["dimension"])
+            dim = dimDict[mapDim]
+            
             try:
                 name = json.loads(banner["Name"])["text"]
 
             except KeyError:
                 name = ""
+            
             bannerDict = {"X": X,
                           "Y": Y,
                           "Z": Z,
@@ -415,7 +414,7 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
                                              scale=mapScale,
                                              x=mapX,
                                              z=mapZ,
-                                             dim=mapDim)
+                                             dim=dimDict[mapDim])
 
             mapImage.save(os.path.join(outputFolder, filename))
             mapImage.close()
