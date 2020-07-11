@@ -303,7 +303,7 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
                                                  z=mapZ,
                                                  dim=mapDim)
                 # scale the image based on the map zoom level
-                mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2)
+                mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2, Image.NEAREST)
                 # print(mapImage.size)
                 # save and close
                 mapImage.save(os.path.join(outputFolder, filename))
@@ -372,7 +372,7 @@ def makeMapPngJava(worldFolder, outputFolder, unlimitedTracking=False):
             mapTime = now
 
         if (str(mapId), imageHash) not in idHashes.items() and imageHash != "fcd6bcb56c1689fcef28b57c22475bad":
-            mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2)
+            mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2, Image.NEAREST)
             filename = filenameFormat.format(mapId=mapId,
                                              mapHash=imageHash,
                                              epoch=mapTime,
@@ -498,7 +498,7 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
                         filename = os.path.join(foldername, str(levelNumz) + ".png")
                         #print(filename, cropBox )
                         tilePng = level4MapPng.crop(cropBox)
-                        tilePng = tilePng.resize((256, 256))
+                        tilePng = tilePng.resize((256, 256), Image.NEAREST)
                         tilePng.save(filename)
 
 
@@ -521,7 +521,7 @@ def extrapolateZoom(tileFolder, level):
             tilePng.paste(previousTilePng, topLeft, previousTilePng)
             #print(previousTile)
         #print(filename)
-        tilePng = tilePng.resize((256,256))
+        tilePng = tilePng.resize((256,256), Image.NEAREST)
         os.makedirs(foldername, exist_ok=True)
         tilePng.save(os.path.join(foldername, "{}.png".format(newTile[0][2])))
 
