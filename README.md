@@ -1,10 +1,10 @@
-# papyri version 1.0.1
+# papyri version 1.1
 
 Papyri is a Minecraft map item web presenter. It will show all maps and banners created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since many maps can be created of the same area, Papyri will prioritize rendering so that maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
 
 [Example - Byblos](https://minecraft.greener.ca/byblos/)
 
-![Papyri](https://user-images.githubusercontent.com/2853489/73033344-bc220880-3e0f-11ea-8715-f99dcd3494d7.png)
+![Papyri](logo.png)
 
 ## prerequisites
 

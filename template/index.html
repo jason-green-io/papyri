@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-	
+    
     <title>Papyri</title>
 
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	
-	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="shortcut icon" type="image/png" href="./papyri-32x32.png" />
+    <link rel="icon" type="image/png" href="./papyri-32x32.png"/>
 
     <link rel="stylesheet" href="./assets/css/papyri.css"/>
     
@@ -23,7 +24,6 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <script src='https://unpkg.com/@mapbox/leaflet-pip@latest/leaflet-pip.js'></script>
-	
 </head>
 <body>
 
@@ -56,7 +56,7 @@
         },
         infinite: true
     });
-	
+    
     tilesUrl = './tiles/{id}/{z}/{x}/{y}.png'
     
     overworld = L.tileLayer(tilesUrl, {id: "0", maxZoom: 20, maxNativeZoom: 17});
@@ -74,7 +74,7 @@
     const regionGradient = ["#fb0004","#f70008","#f3000c","#ef0010","#eb0014","#e70018","#e4001b","#e0001f","#dc0023","#d80027","#d4002b","#d0002f","#cc0033","#c80037","#c4003b","#c0003f","#bc0043","#b80047","#b4004b","#b1004e","#ad0052","#a90056","#a5005a","#a1005e","#9d0062","#990066","#95006a","#91006e","#8d0072","#890076","#85007a","#81007e","#7e0081","#7a0085","#760089","#72008d","#6e0091","#6a0095","#660099","#62009d","#5e00a1","#5a00a5","#5600a9","#5200ad","#4e00b1","#4b00b4","#4700b8","#4300bc","#3f00c0","#3b00c4","#3700c8","#3300cc","#2f00d0","#2b00d4","#2700d8","#2300dc","#1f00e0","#1b00e4","#1800e7","#1400eb","#1000ef","#0c00f3","#0800f7","#0400fb"];
 
     map = L.map('map', {
-		crs: L.CRS.pr,
+        crs: L.CRS.pr,
         layers: [overworld],
         //touchZoom: false
     });
@@ -92,7 +92,7 @@
     }
     
     function handleClick(e) {
-            var html = '<span style=\"font-size:16px;font-family:unifont\">Last ID in the lists is rendered.</br>';
+            var html = '<span style="font-size:16px;font-family:unifont">';
         console.log(e)
         var match = leafletPip.pointInLayer(
         // the clicked point
@@ -103,24 +103,27 @@
         false);
         if (match.length) {
             for (var i = 0; i < match.length; i++) {
-                scale = match[i].feature.properties.scale 
-                html += "<span style=\"color:" + IDcolors[scale] + "\">"
-                     + scaleText[scale] + " scale: "
-                     + " IDs: " + match[i].feature.properties.IDs
-                     + "</span></br>"
-
+                var maps = match[i].feature.properties.maps
+                    scale = match[i].feature.properties.scale 
+                    html += "<span style=\"color:" + IDcolors[scale] + "\">"
+                    html +=  scaleText[scale] + " scale:</br>"
+                for (var j = 0; j < maps.length; j++) {
+                    html += "map ID " + maps[j].id + "</br>"
+                    html += '<img src="./maps/' + maps[j].filename + '" height="256" width="256"/></br>'
+                }
+                html += "</span></br>"
             }
         html += "</span>"
         }
-		if (html) {
-			map.openPopup(html, e.latlng);
-		}
-	}
+        if (html) {
+            map.openPopup(html, e.latlng, {maxHeight:300, maxWidth:300});
+        }
+    }
     
     styleMaps = { style: function (feature) {
-		  				return {color: IDcolors[feature.properties.scale]}
-						}
-    		}
+                        return {color: IDcolors[feature.properties.scale]}
+                        }
+            }
                 
     styleCustom = { style: function (feature) {
         return feature.properties.style
@@ -138,7 +141,7 @@
     netherMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
     endMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
 
-	mapsOverlays = [overworldMaps, netherMaps, endMaps];
+    mapsOverlays = [overworldMaps, netherMaps, endMaps];
 
     overworldOverlays = {
         "banners": overworldBanners,
@@ -234,15 +237,15 @@
     loadJSON('banners.json', function(response) {
         // Parse JSON string into object
         markers = JSON.parse(response);
-	
+    
         for ( var i=0; i < markers.length; ++i ) {
-	        L.marker( [markers[i].Z, markers[i].X], {icon: L.divIcon({
-		        iconSize: [576, 48],
+            L.marker( [markers[i].Z, markers[i].X], {icon: L.divIcon({
+                iconSize: [576, 48],
                 className: 'banner-marker',
                 html: '<img class="banner-image" src="./assets/banner-images/'
                 + markers[i].color + 'banner.png"/><span class="banner-name">'
                 + markers[i].name + '</class>' })}).addTo( allOverlays[markers[i].dimension]['banners'] );
-	    };
+        };
     });
         
     loadJSON('custom.json', function(response) {

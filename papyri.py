@@ -21,7 +21,6 @@ import sys
 import hashlib
 import time
 import struct
-import numpy as np
 
 __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
@@ -34,14 +33,14 @@ __status__ = "release"
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-# filename format for map .dat file  color data
-filenameFormat = "map_{mapId}_{mapHash}_{epoch}_{dim}_{x}_{z}_{scale}.png"
+
+mapPngFilenameFormat = "map_{mapId}_{mapHash}_{epoch}_{dimension}_{x}_{z}_{scale}.png"
 
 # now in epoch
 now = time.time()
 
 # setup the logger
-logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 
 # stuff to convert the map color data to RGB values
 multipliers = [180, 220, 255, 135]
@@ -122,14 +121,6 @@ dimDict = {-1: "nether",
            "end": 1}
 
 
-def scaleImage(image, factor):
-    a = np.array(image)
-
-    #logging.info("Scaling %s %s new %s %s factor %s", W, H, newW, newH, factor)
-    b = a.repeat(factor,axis=0).repeat(factor,axis=1)
-    return Image.fromarray(b)
-
-
 def findMapFiles(inputFolder):
     mapFiles = []
     
@@ -202,40 +193,56 @@ class DefaultOrderedDict(OrderedDict):
                                                OrderedDict.__repr__(self))
 
 
-# all the banners
-banners = set()
-
-# all the maps
-maps = DefaultOrderedDict(LastUpdatedOrderedDict)
-
 # couple of structures to keep stuff
-BannerTuple = namedtuple("BannerTuple", ["X", "Y", "Z", "name", "dimension", "color"])
-MapTuple = namedtuple("MapTuple", ["name", "mapId", "epoch", "dimension", "mapTopLeft", "scale"])
+BannerTuple = namedtuple("BannerTuple", ["X", "Y", "Z", "name", "color", "dimension"])
+MapTuple = namedtuple("MapTuple", ["mapData", "bannerData", "frameData"])
+MapPngTuple = namedtuple("MapPngTuple", ["mapId", "mapHash", "epoch", "x", "z", "dimension", "scale"])
 
-def getidHashes(outputFolder):
-    """Returns a dict of {latest updated map ID: hash}"""
+
+def filterLatestMapPngsByCenter(mapPngs):
+    """Returns a list of latest map png files by their center"""
 
     # get all generated maps
-    mapPngs = glob.glob(os.path.join(outputFolder, "map_*_*_*_*_*_*_*.png"))
     
-    idHashEpochs = []
-    idHashes = OrderedDict()
+    centerEpochs = []
+    filterDict = {}
 
-    for filename in mapPngs:
-        filename = os.path.split(filename)[-1].split("_")
-        mapId = filename[1]
-        mapHash = filename[2]
-        epoch = float(filename[3])
-        idHashEpochs.append((mapId, mapHash, epoch))
+    for mapPng in mapPngs:
+        centerEpochs.append(("{x}_{z}_{scale}_{dimension}".format(**mapPng._asdict()), mapPng.epoch, mapPng))
+        
+    # sort the whole thing by epoch
+    centerEpochs.sort(key=operator.itemgetter(1))
+    
+    for centerEpoch in centerEpochs:
+        # this will only keep the latest map ids around for rendering
+        filterDict[centerEpoch[0]] = centerEpoch[2]
+   
+    latestMapPngs = list(filterDict.values())
+    
+    return latestMapPngs
+
+
+def filterLatestMapPngsById(mapPngs):
+    """Returns a list of latest map png files by Id"""
+
+    # get all generated maps
+    
+    idEpochs = []
+    filterDict = {}
+
+    for mapPng in mapPngs:
+        idEpochs.append((mapPng.mapId, mapPng.epoch, mapPng))
     
     # sort the whole thing by epoch
-    idHashEpochs.sort(key=operator.itemgetter(2))
+    idEpochs.sort(key=operator.itemgetter(2))
 
-    for idHashEpoch in idHashEpochs:
+    for idEpoch in idEpochs:
         # this will only keep the latest map ids around for rendering
-        idHashes[idHashEpoch[0]] = idHashEpoch[1]
+        filterDict[idEpoch[0]] = idEpoch[2]
+   
+    latestMapPngs = list(filterDict.values())
     
-    return idHashes
+    return latestMapPngs
 
 
 def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
@@ -323,7 +330,7 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
             # if we've never seen this data on this map id, then write out the
             # file
             if (str(mapId), imageHash) not in idHashes.items() and imageHash != "fcd6bcb56c1689fcef28b57c22475bad":
-                filename = filenameFormat.format(mapId=mapId,
+                filename = mapPngFilenameFormat.format(mapId=mapId,
                                                  mapHash=imageHash,
                                                  epoch=mapTime,
                                                  scale=mapScale,
@@ -331,7 +338,7 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
                                                  z=mapZ,
                                                  dim=mapDim)
                 # scale the image based on the map zoom level
-                mapImage = scaleImage(mapImage, 2 ** mapScale)
+                mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2, Image.NEAREST)
                 # print(mapImage.size)
                 # save and close
                 mapImage.save(os.path.join(outputFolder, filename))
@@ -340,11 +347,19 @@ def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
 
 def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
     """generate png from map*.dat files"""
+    # filename format for map .dat file  color data
+    maps = []
     
     os.makedirs(outputFolder, exist_ok=True)
 
-    idHashes = getidHashes(outputFolder)
-
+    mapPngs = getMapPngs(outputFolder)
+    logging.debug(mapPngs)
+    currentMapPngs = filterLatestMapPngsById(mapPngs)
+    
+    currentIdHashes = {(x.mapId, x.mapHash): x for x in currentMapPngs}
+    currentIds = {x.mapId: x for x in currentMapPngs}
+    
+    logging.debug(currentIds)
     for mapDatFile in tqdm(mapDatFiles, "map_*.dat nbt -> png".ljust(24), bar_format="{l_bar}{bar}"):
         mapNbtFile = nbtlib.load(mapDatFile)
         mapNbt = mapNbtFile.root
@@ -356,14 +371,14 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
 
         if mapUnlimitedTracking and not unlimitedTracking:
             continue
-        mapId = os.path.basename(mapDatFile).strip("map_").strip(".dat")
-        mapScale = int(mapNbt["data"]["scale"])
-        mapX = int(mapNbt["data"]["xCenter"])
-        mapZ = int(mapNbt["data"]["zCenter"])
+        mapId = int(os.path.basename(mapDatFile).strip("map_").strip(".dat"))
+        scale = int(mapNbt["data"]["scale"])
+        x = int(mapNbt["data"]["xCenter"])
+        z = int(mapNbt["data"]["zCenter"])
         try:
-            mapDim = int(mapNbt["data"]["dimension"])
+            dimension = int(mapNbt["data"]["dimension"])
         except:
-            mapDim = str(mapNbt["data"]["dimension"])
+            dimension = str(mapNbt["data"]["dimension"])
         mapColors = mapNbt["data"]["colors"]
         colorTuples = [allColors[x % 256] for x in mapColors]
 
@@ -372,13 +387,14 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
             # print(banners)
         except KeyError:
             mapBanners = []
+
+        banners = []
         for banner in mapBanners:
             # print(banner)
             X = int(banner["Pos"]["X"])
             Y = int(banner["Pos"]["Y"])
             Z = int(banner["Pos"]["Z"])
             color = banner["Color"]
-            dim = dimDict[mapDim]
             
             try:
                 name = json.loads(banner["Name"])["text"]
@@ -391,34 +407,95 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
                           "Z": Z,
                           "color": color,
                           "name": name,
-                          "dimension": dim}
+                          "dimension": dimDict[dimension]}
             bannerTuple = BannerTuple(**bannerDict)
-            banners.add(bannerTuple)
+            banners.append(bannerTuple)
+        
+        frames = []
+
         mapImage = Image.new("RGBA", (128, 128))
         mapImage.putdata(colorTuples)
-        imageHash = hashlib.md5(mapImage.tobytes()).hexdigest()
+        mapHash = hashlib.md5(mapImage.tobytes()).hexdigest()
 
-        if str(mapId) not in idHashes.keys():
 
-            mapTime = os.path.getmtime(mapDatFile)
+        if mapId not in currentIds:
+            # brand new image
+            logging.debug("%s is a new map", mapId)
+            epoch = os.path.getmtime(mapDatFile)
         else:
-            mapTime = now
+            # changed image
+            logging.debug("%s is already known", mapId)
+            epoch = currentIds.get(mapId).epoch
 
-        if (str(mapId), imageHash) not in idHashes.items() and imageHash != "fcd6bcb56c1689fcef28b57c22475bad":
-            mapImage = scaleImage(mapImage, 2 ** mapScale)
-            filename = filenameFormat.format(mapId=mapId,
-                                             mapHash=imageHash,
-                                             epoch=mapTime,
-                                             scale=mapScale,
-                                             x=mapX,
-                                             z=mapZ,
-                                             dim=dimDict[mapDim])
+            if (mapId, mapHash) not in currentIdHashes:
+                epoch = now
+        
+       
+        mapPng = MapPngTuple(mapId=mapId,
+                             mapHash=mapHash,
+                             epoch=epoch,
+                             dimension=dimension,
+                             x=x,
+                             z=z, 
+                             scale=scale)
+
+
+        if (mapId, mapHash) not in currentIdHashes:
+            logging.debug("%s changed", mapId)
+            mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.NEAREST)
+            
+            filename = mapPngFilenameFormat.format(**mapPng._asdict())
 
             mapImage.save(os.path.join(outputFolder, filename))
-            mapImage.close()
+        
+        mapData = MapTuple(mapData=mapPng,
+                           bannerData=banners,
+                           frameData=frames)
+        maps.append(mapData)
+    
+    logging.debug(maps)
+    logging.info("Processed %s maps", len(maps))
+    
+    return maps
 
-    logging.info("Found %s banners", len(banners))
 
+def getMapPngs(mapPngFolder):
+    mapPngList = [] 
+    
+    # get all the maps
+    mapPngs = glob.glob(os.path.join(mapPngFolder, "map_*_*_*_*_*_*_*.png"))
+    
+    # iterate over all the maps
+    for mapPng in mapPngs:
+        filename = os.path.basename(mapPng)
+        (mapId,
+         mapHash,
+         epoch,
+         dimension,
+         x,
+         z,
+         scale) = filename.strip("map_").strip(".png").split("_")
+
+        # change some types
+        x = int(x)
+        z = int(z)
+        scale = int(scale)
+        dimension = int(dimension)
+        mapId = int(mapId)
+        if not dimension in dimDict:
+            logging.info("Skipped map %s with invalid dimension.", mapId)
+            continue
+        epoch = float(epoch)
+
+        mapPngList.append(MapPngTuple(mapId=mapId,
+                                      mapHash=mapHash,
+                                      epoch=epoch,
+                                      dimension=dimension,
+                                      x=x,
+                                      z=z, 
+                                      scale=scale))
+    
+    return mapPngList
 
 def mergeToLevel4(mapPngFolder, outputFolder):
     """pastes all maps to render onto a intermediate zoom level 4 map"""
@@ -432,39 +509,27 @@ def mergeToLevel4(mapPngFolder, outputFolder):
     level4Dict = defaultdict(lambda: defaultdict(list))
 
     # get all the maps
-    mapPngs = glob.glob(os.path.join(mapPngFolder, "map_*_*_*_*_*_*_*.png"))
+    mapPngs = getMapPngs(mapPngFolder)
+    latestMapPngs = filterLatestMapPngsByCenter(mapPngs)
     
     # iterate over all the maps
     for mapPng in mapPngs:
-        name = os.path.basename(mapPng)
-        (mapId,
-         mapHash,
-         epoch,
-         dim,
-         x,
-         z,
-         scale) = name.strip("map_").strip(".png").split("_")
-        # change some types
-        x = int(x)
-        z = int(z)
-        scale = int(scale)
-        dim = int(dim)
-        mapId = int(mapId)
-        if not dim in dimDict:
-            logging.info("Skipped map %s with invalid dimension.", mapId)
+        if not mapPng.dimension in dimDict:
+            logging.info("Skipped map %s with invalid dimension.", mapPng.mapId)
             continue
-        epoch = float(epoch)
         
         # convert the center of the map to the top left corner
-        mapTopLeft = (x - 128 * 2 ** scale //
-                      2 + 64, z - 128 * 2 ** scale // 2 + 64)
-        # make a tuple out of it
-        amap = MapTuple(name=name, mapId=mapId, epoch=epoch, dimension=dim, mapTopLeft=mapTopLeft, scale=scale)
+        mapTopLeft = (mapPng.x - 128 * 2 ** mapPng.scale // 2 + 64,
+                      mapPng.z - 128 * 2 ** mapPng.scale // 2 + 64)
+        
         # figure out which level 4 map it belongs to
         level4Coords = (mapTopLeft[0] // 2048 * 2048,
                         mapTopLeft[1] // 2048 * 2048)
+        
         # throw it into a "dict"
-        level4Dict[dim][level4Coords].append(amap)
+        level4Dict[mapPng.dimension][level4Coords].append(mapPng)
+    
+    logging.debug(level4Dict)
     
     # iterate over the level 4 buckets
     for dim in level4Dict.items():
@@ -475,8 +540,6 @@ def mergeToLevel4(mapPngFolder, outputFolder):
             mapTuples = coords[1]
             
             # sort them, import for the rendering order
-            mapTuples.sort(key=lambda x: x.mapId)
-            mapTuples.sort(key=lambda x: x.epoch)
             mapTuples.sort(key=lambda x: x.scale, reverse=True)
             
             # create the level 4 images
@@ -485,13 +548,11 @@ def mergeToLevel4(mapPngFolder, outputFolder):
             # iterate over the maps in each bucket
             for mapTuple in mapTuples:
                 # get the map details
-                maps[(mapTuple.dimension, mapTuple.scale,
-                      mapTuple.mapTopLeft[0],
-                      mapTuple.mapTopLeft[1])].update({mapTuple.mapId: None})
-                mapPngCoords = (divmod(mapTuple.mapTopLeft[0], 2048)[1],
-                                divmod(mapTuple.mapTopLeft[1], 2048)[1])
+                mapPngCoords = (divmod(mapTuple.x - 128 * 2 ** mapTuple.scale // 2 + 64, 2048)[1],
+                                divmod(mapTuple.z - 128 * 2 ** mapTuple.scale // 2 + 64, 2048)[1])
+                mapPngFilename = mapPngFilenameFormat.format(**mapTuple._asdict()) 
                 # paste the image into the level 4 map
-                with Image.open(os.path.join(mapPngFolder, mapTuple.name)) as mapPng:
+                with Image.open(os.path.join(mapPngFolder, mapPngFilename)) as mapPng:
                     level4MapPng.paste(mapPng, mapPngCoords, mapPng)
                 #print(mapTuple)
             # figure out the name of the file, and save it
@@ -503,7 +564,7 @@ def mergeToLevel4(mapPngFolder, outputFolder):
 
 
 def genZoom17Tiles(level4MapFolder, outputFolder):
-    """generates lowest zoom level tiles from zcombined oom level 4 maps"""
+    """generates lowest zoom level tiles from combined zoom level 4 maps"""
 
     # get all the level 4 maps 
     level4MapFilenames = glob.glob(os.path.join(level4MapFolder, "merged_map_*_*_*.png"))
@@ -536,7 +597,7 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
                         filename = os.path.join(foldername, str(levelNumz) + ".png")
                         #print(filename, cropBox )
                         tilePng = level4MapPng.crop(cropBox)
-                        tilePng = scaleImage(tilePng, 2)
+                        tilePng = tilePng.resize((256, 256), Image.NEAREST)
                         tilePng.save(filename)
 
 
@@ -560,28 +621,43 @@ def extrapolateZoom(tileFolder, level):
             tilePng.paste(previousTilePng, topLeft, previousTilePng)
             #print(previousTile)
         #print(filename)
-        tilePng = tilePng.resize((256,256))
+        tilePng = tilePng.resize((256,256), Image.NEAREST)
         os.makedirs(foldername, exist_ok=True)
         tilePng.save(os.path.join(foldername, "{}.png".format(newTile[0][2])))
 
 
-def genBannerMarkers(bannerList, outputFolder):
-    """generate the banner.json file fram the banner list"""
+def genBannerMarkers(maps, outputFolder):
+    """generate the banner.json file from maps list"""
+    logging.debug(maps)
+
     with open(os.path.join(outputFolder, "banners.json"), "+w", encoding="utf-8") as f:
-        bannerList = [a._asdict() for a in bannerList]
+        # this will also remove deplicates
+        bannerList = [a._asdict() for a in {a for amap in maps for a in amap.bannerData}]
         f.write(json.dumps(list(bannerList)))
 
 
 def genMapIdMarkers(maps, outputFolder):
-    mapsList = []
+    mapIdMarkers = [] 
+    dimCenterScaleDict = defaultdict(list)
+    for amap in maps:
+        mapData = amap.mapData
+        dimCenterScaleDict[(mapData.dimension, mapData.x, mapData.z, mapData.scale)].append(amap)
+    
+    for dimCenterScale in dimCenterScaleDict.items():
+        logging.debug("DimCenterScale %s", dimCenterScale[0])
+        dimension, x, z, scale = dimCenterScale[0]
+       
+        maps = []
+        for amap in dimCenterScale[1]:
+            maps.append({"id": amap.mapData.mapId,
+                         "scale" : amap.mapData.scale,
+                         "filename": mapPngFilenameFormat.format(**amap.mapData._asdict())})
 
-    for amap in maps.items():
-        X = amap[0][2] - 64
-        Z = amap[0][3] - 64
+        X = x - 64 * 2 ** scale
+        Z = z - 64 * 2 ** scale
         
-        scale = amap[0][1]
         width = 128 * 2 ** scale
-        dimension = amap[0][0] 
+
         TL = [X, Z]
         TR = [X, Z + width]
         BL = [X + width, Z + width]
@@ -590,7 +666,7 @@ def genMapIdMarkers(maps, outputFolder):
         coordinates = [[TL, TR, BL, BR, TL]]
         properties = {"scale": scale,
                       "dimension": dimDict[dimension],
-                      "IDs": ",".join([str(x) for x in amap[1].keys()]) }
+                      "maps": maps }
         
         geometry = {"type": "Polygon",
                     "coordinates": coordinates}
@@ -599,9 +675,10 @@ def genMapIdMarkers(maps, outputFolder):
                    "properties": properties,
                    "geometry": geometry}
         
-        mapsList.append(feature)
+        mapIdMarkers.append(feature)
+
     with open(os.path.join(outputFolder, "maps.json"), "+w", encoding="utf-8") as f:
-        f.write(json.dumps(mapsList))
+        f.write(json.dumps(mapIdMarkers))
 
 
 def copyTemplate(outputFolder, copytemplate):
@@ -632,7 +709,7 @@ def main():
     
     # where to the merged zoom level 4 maps go?
     mergedMapsOutput = os.path.join(args.output, "merged-maps")
- 
+    
     # figure out if the input folder is java or bedrock
     if os.path.isdir(os.path.join(args.world, "db")):
         # do the bedrock thing
@@ -640,7 +717,7 @@ def main():
     else:
         # do the java thing
         mapFiles = findMapFiles(args.world)
-        makeMapPngJava(mapFiles, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
+        latestMaps = makeMapPngJava(mapFiles, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
     
     # make the level 4 maps
     mergeToLevel4(mapsOutput, mergedMapsOutput)
@@ -653,16 +730,15 @@ def main():
         extrapolateZoom(tileOutput, zoom)
     
     # make the banner markers
-    genBannerMarkers(banners, args.output)
+    genBannerMarkers(latestMaps, args.output)
 
     # make the maps info markers
-    genMapIdMarkers(maps, args.output)
+    genMapIdMarkers(latestMaps, args.output)
     
     # make sure the html and assets are present and copied
     copyTemplate(args.output, args.copytemplate)
     
     logging.info("Done")
-
 
 if __name__ == "__main__":
     main()
