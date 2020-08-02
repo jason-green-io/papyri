@@ -226,7 +226,7 @@ def filterLatestMapPngsById(mapPngs):
     """Returns a list of latest map png files by Id"""
 
     # get all generated maps
-    
+   
     idEpochs = []
     filterDict = {}
 
@@ -235,155 +235,82 @@ def filterLatestMapPngsById(mapPngs):
     
     # sort the whole thing by epoch
     idEpochs.sort(key=operator.itemgetter(2))
-
+    
     for idEpoch in idEpochs:
         # this will only keep the latest map ids around for rendering
         filterDict[idEpoch[0]] = idEpoch[2]
-   
+    
     latestMapPngs = list(filterDict.values())
     
     return latestMapPngs
 
 
-def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
-    """generate all the png files from leveldb"""
+def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
+    nbtMapData = []
+    if serverType == "bds":
+        # open leveldb
+        db = leveldb.open(os.path.join(worldFolder, "db"))
 
-    # mke sure the output exsists
-    os.makedirs(outputFolder, exist_ok=True)
+        # iterate over all the maps
+        for a in tqdm(leveldb.iterate(db), bar_format="{l_bar}{bar}"):
+            key = bytearray(a[0])
+            if b"map" in key:
+                # get extract an nbt object
+                mapNbtIo = BytesIO(a[1])
+                mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
+                mapNbt = mapNbtFile.root
+                mapId = int(mapNbt["mapId"])
+                epoch = now
+                nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
+
+    elif serverType == "java":   
+        mapDatFiles = findMapFiles(args.world)
+        for mapDatFile in tqdm(mapDatFiles, "map_*.dat -> nbt".ljust(24), bar_format="{l_bar}{bar}"):
+            mapNbtFile = nbtlib.load(mapDatFile)
+            mapNbt = mapNbtFile.root["data"]
+            mapId = int(os.path.basename(mapDatFile).strip("map_").strip(".dat"))
+            epoch = os.path.getmtime(mapDatFile)
+            nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
+
     
-    # get the current map data hashes
-    idHashes = getidHashes(outputFolder)
-
-    # open leveldb
-    db = leveldb.open(os.path.join(worldFolder, "db"))
-
-    # iterate over all the maps
-    for a in tqdm(leveldb.iterate(db), bar_format="{l_bar}{bar}"):
-        key = bytearray(a[0])
-        if b"map" in key:
-            # get extract an nbt object
-            mapNbtIo = BytesIO(a[1])
-            mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
-            mapNbt = mapNbtFile.root
-            # print(mapNbt)
-            
-            # is the map unlimitedTracking?
-            try:
-                mapUnlimitedTracking = mapNbt["unlimitedTracking"]
-            except KeyError:
-                mapUnlimitedTracking = False
-
-            # skip if we didn't specify to include then on the cli
-            if mapUnlimitedTracking and not unlimitedTracking:
-                continue
-            
-            # assign a bunch of stuff
-            mapId = int(mapNbt["mapId"])
-            mapScale = int(mapNbt["scale"])
-            mapTime = now
-            mapX = int(mapNbt["xCenter"])
-            mapZ = int(mapNbt["zCenter"])
-            try:
-                mapDim = int(mapNbt["dimension"])
-            except:
-                mapDim = str(mapNbt["dimension"])
-            mapColors = mapNbt["colors"]
-
-            # got banners?
-            try:
-                banners = mapNbt["banners"]
-            except KeyError:
-                banners = []
-
-            # iterate over them
-            for banner in banners:
-                # more assigning
-                X = banner["Pos"]["X"]
-                Y = banner["Pos"]["Y"]
-                Z = banner["Pos"]["Z"]
-                color = banner["Color"]
-                dim = dimDict[mapDim]
-            
-                try:
-                    name = json.loads(banner["Name"])["text"]
-                except KeyError:
-                    name = ""
-
-                bannerDict = {"X": X,
-                              "Y": Y,
-                              "Z": Z,
-                              "color": color,
-                              "name": name,
-                              "dimension": dim}
-
-                # buils a tuple and store it
-                bannerTuple = BannerTuple(**bannerDict)
-                banners.add(bannerTuple)
-
-            # create an image from the color data
-            mapImage = Image.frombytes("RGBA", (128, 128),
-                                       bytes([x % 256 for x in mapColors]),
-                                       'raw')
-            # compute a hash of the data
-            imageHash = hashlib.md5(mapImage.tobytes()).hexdigest()
-
-            # if we've never seen this data on this map id, then write out the
-            # file
-            if (str(mapId), imageHash) not in idHashes.items() and imageHash != "fcd6bcb56c1689fcef28b57c22475bad":
-                filename = mapPngFilenameFormat.format(mapId=mapId,
-                                                 mapHash=imageHash,
-                                                 epoch=mapTime,
-                                                 scale=mapScale,
-                                                 x=mapX,
-                                                 z=mapZ,
-                                                 dim=mapDim)
-                # scale the image based on the map zoom level
-                mapImage = mapImage.resize((128 * 2 ** mapScale,) * 2, Image.NEAREST)
-                # print(mapImage.size)
-                # save and close
-                mapImage.save(os.path.join(outputFolder, filename))
-                mapImage.close()
-
-
-def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
-    """generate png from map*.dat files"""
-    # filename format for map .dat file  color data
+    
+    
     maps = []
-    
     os.makedirs(outputFolder, exist_ok=True)
-
     mapPngs = getMapPngs(outputFolder)
-    logging.debug(mapPngs)
     currentMapPngs = filterLatestMapPngsById(mapPngs)
     
     currentIdHashes = {(x.mapId, x.mapHash): x for x in currentMapPngs}
     currentIds = {x.mapId: x for x in currentMapPngs}
     
-    logging.debug(currentIds)
-    for mapDatFile in tqdm(mapDatFiles, "map_*.dat nbt -> png".ljust(24), bar_format="{l_bar}{bar}"):
-        mapNbtFile = nbtlib.load(mapDatFile)
-        mapNbt = mapNbtFile.root
-        # print(mapNbt["data"])
+    for nbtMap in tqdm(nbtMapData, "nbt -> png".ljust(24), bar_format="{l_bar}{bar}"):
+        mapId = nbtMap["id"]
+        mapNbt = nbtMap["nbt"]
+        mapEpoch = nbtMap["epoch"]
         try:
-            mapUnlimitedTracking = mapNbt["data"]["unlimitedTracking"]
+            mapUnlimitedTracking = mapNbt["unlimitedTracking"]
         except KeyError:
             mapUnlimitedTracking = False
 
         if mapUnlimitedTracking and not unlimitedTracking:
             continue
-        mapId = int(os.path.basename(mapDatFile).strip("map_").strip(".dat"))
-        scale = int(mapNbt["data"]["scale"])
-        x = int(mapNbt["data"]["xCenter"])
-        z = int(mapNbt["data"]["zCenter"])
-        try:
-            dimension = int(mapNbt["data"]["dimension"])
-        except:
-            dimension = str(mapNbt["data"]["dimension"])
-        mapColors = mapNbt["data"]["colors"]
-        colorTuples = [allColors[x % 256] for x in mapColors]
+        scale = int(mapNbt["scale"])
+        x = int(mapNbt["xCenter"])
+        z = int(mapNbt["zCenter"])
+        
+        dimension = mapNbt["dimension"]
+        mapColors = mapNbt["colors"]
+        
+        if type(dimension) == nbtlib.tag.Int:
+            dimension = int(mapNbt["dimension"])
+        if type(dimension) == nbtlib.tag.Byte:
+            dimension = int(mapNbt["dimension"])
+        elif type(dimension) == nbtlib.tag.String:
+            dimension = dimDict[str(mapNbt["dimension"])]
+        
 
         try:
-            mapBanners = mapNbt["data"]["banners"]
+            mapBanners = mapNbt["banners"]
             # print(banners)
         except KeyError:
             mapBanners = []
@@ -412,16 +339,27 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
             banners.append(bannerTuple)
         
         frames = []
-
-        mapImage = Image.new("RGBA", (128, 128))
-        mapImage.putdata(colorTuples)
+        # logging.debug(mapColors)
+        
+        if serverType == "bds":
+            mapImage = Image.frombytes("RGBA", (128, 128),
+                                       bytes([x % 256 for x in mapColors]),
+                                       'raw')
+        elif serverType == "java":
+            colorTuples = [allColors[x % 256] for x in mapColors]
+            mapImage = Image.new("RGBA", (128, 128))
+            mapImage.putdata(colorTuples)
+        
         mapHash = hashlib.md5(mapImage.tobytes()).hexdigest()
-
+        
+        # empty map
+        if mapHash == "fcd6bcb56c1689fcef28b57c22475bad":
+            continue
 
         if mapId not in currentIds:
             # brand new image
             logging.debug("%s is a new map", mapId)
-            epoch = os.path.getmtime(mapDatFile)
+            epoch = mapEpoch
         else:
             # changed image
             logging.debug("%s is already known", mapId)
@@ -458,6 +396,42 @@ def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
     
     return maps
 
+def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
+    """generate all the png files from leveldb"""
+
+    nbtMapData = []
+    # open leveldb
+    db = leveldb.open(os.path.join(worldFolder, "db"))
+
+    # iterate over all the maps
+    for a in tqdm(leveldb.iterate(db), bar_format="{l_bar}{bar}"):
+        key = bytearray(a[0])
+        if b"map" in key:
+            # get extract an nbt object
+            mapNbtIo = BytesIO(a[1])
+            mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
+            mapNbt = mapNbtFile.root
+            mapId = int(mapNbt["mapId"])
+            epoch = now
+            nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
+
+    return makeMaps(nbtMapData, outputFolder, unlimitedTracking)
+
+
+def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
+    """generate png from map*.dat files"""
+    # filename format for map .dat file  color data
+    
+    nbtMapData = []
+    
+    for mapDatFile in tqdm(mapDatFiles, "map_*.dat -> nbt".ljust(24), bar_format="{l_bar}{bar}"):
+        mapNbtFile = nbtlib.load(mapDatFile)
+        mapNbt = mapNbtFile.root["data"]
+        mapId = int(os.path.basename(mapDatFile).strip("map_").strip(".dat"))
+        epoch = os.path.getmtime(mapDatFile)
+        nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
+
+    return makeMaps(nbtMapData, outputFolder, unlimitedTracking)
 
 def getMapPngs(mapPngFolder):
     mapPngList = [] 
@@ -693,6 +667,7 @@ def copyTemplate(outputFolder, copytemplate):
 def main():
     parser = argparse.ArgumentParser(description='convert minecraft maps to the web')
     parser.add_argument('--world', help="location of your world folder or save folder", required=True)
+    parser.add_argument('--type', help="server type, bedrock or java", choices=["java", "bds"], required=True)
     parser.add_argument('--includeunlimitedtracking', help="include maps that have unlimited tracking on, this includes older maps from previous Minecraft versions and treasure maps in +1.13", action="store_true")
     #parser.add_argument('--overlaymca', help="generate the regionfile overlay (Java only)", action="store_true")
     parser.add_argument('--output', help="output path for web stuff", required=True)
@@ -711,13 +686,7 @@ def main():
     mergedMapsOutput = os.path.join(args.output, "merged-maps")
     
     # figure out if the input folder is java or bedrock
-    if os.path.isdir(os.path.join(args.world, "db")):
-        # do the bedrock thing
-        makeMapPngBedrock(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
-    else:
-        # do the java thing
-        mapFiles = findMapFiles(args.world)
-        latestMaps = makeMapPngJava(mapFiles, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
+    latestMaps = makeMaps(args.world, mapsOutput, serverType=args.type, unlimitedTracking=args.includeunlimitedtracking)
     
     # make the level 4 maps
     mergeToLevel4(mapsOutput, mergedMapsOutput)
