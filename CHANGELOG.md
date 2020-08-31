@@ -12,13 +12,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   place in papyri. Inspired by the Hermiton Herald.
 - CHANGELOG
 - Logo
+- support for 1.16 and custom dimensions
 ### Fixed
 - Windows path issues #21
 - Slightly better support for modded servers #18
 ### Changed
 - using NEAREST filter to keep pixelated Minecraft feel in some cases
   [@AndrewKvalheim](https://github.com/AndrewKvalheim)
-- changed stylesheet to keep map pixelated at low zoom levels[@AndrewKvalheim](https://github.com/AndrewKvalheim)
+- changed stylesheet to keep map pixelated at low zoom levels [@AndrewKvalheim](https://github.com/AndrewKvalheim)
 
 ## [1.0.0] - 2020-01-23
 ### Added
@@ -28,7 +29,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - dependency on vips and openseadragon
 ### Fixed
 - Windows fixes [@TimoMeijer](https://github.com/TimoMeijer)
-- Docker support[@TimoMeijer](https://github.com/TimoMeijer)
+- Docker support [@TimoMeijer](https://github.com/TimoMeijer)
 
 ## [0.8.4] - 2018-10-14
 ### Added
@@ -41,8 +42,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - mca file display
 ### Changed
-- more pixelation to keep the Minecraft feel
-
+- more pixelation to keep the Minecraft feel 
 ## [0.8.2] - 2018-10-11
 ### Added
 - sort by map ID

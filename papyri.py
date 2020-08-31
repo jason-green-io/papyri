@@ -33,8 +33,9 @@ __status__ = "release"
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
+filenameSeparator = "__"
 
-mapPngFilenameFormat = "map_{mapId}_{mapHash}_{epoch}_{dimension}_{x}_{z}_{scale}.png"
+mapPngFilenameFormat = filenameSeparator.join(["map", "{mapId}", "{mapHash}", "{epoch}", "{dimension}", "{x}", "{z}", "{scale}.png"])
 
 # now in epoch
 now = time.time()
@@ -110,15 +111,12 @@ allColors = [multiplyColor(color, multiplier)
              for color in basecolors for multiplier in multipliers]
 
 # convert dimension names to/from human readable
-dimDict = {-1: "nether",
-           0: "overworld",
-           1: "end",
-           '"minecraft:overworld"': 0,
-           '"minecraft:end"': 1,
-           '"minecraft:nether"': -1,
-           "nether": -1,
-           "overworld": 0,
-           "end": 1}
+dimDict = {-1: "minecraft:the_nether",
+           0: "minecraft:overworld",
+           1: "minecraft:end",
+           'minecraft:overworld': 0,
+           'minecraft:end': 1,
+           'minecraft:the_nether': -1}
 
 
 def findMapFiles(inputFolder):
@@ -252,7 +250,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         db = leveldb.open(os.path.join(worldFolder, "db"))
 
         # iterate over all the maps
-        for a in tqdm(leveldb.iterate(db), bar_format="{l_bar}{bar}"):
+        for a in tqdm(leveldb.iterate(db), "leveldb map keys -> nbt".ljust(24), bar_format="{l_bar}{bar}"):
             key = bytearray(a[0])
             if b"map" in key:
                 # get extract an nbt object
@@ -264,11 +262,11 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                 nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
 
     elif serverType == "java":   
-        mapDatFiles = findMapFiles(args.world)
+        mapDatFiles = findMapFiles(worldFolder)
         for mapDatFile in tqdm(mapDatFiles, "map_*.dat -> nbt".ljust(24), bar_format="{l_bar}{bar}"):
             mapNbtFile = nbtlib.load(mapDatFile)
             mapNbt = mapNbtFile.root["data"]
-            mapId = int(os.path.basename(mapDatFile).strip("map_").strip(".dat"))
+            mapId = int(os.path.basename(mapDatFile)[4:-4])
             epoch = os.path.getmtime(mapDatFile)
             nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
 
@@ -302,11 +300,9 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         mapColors = mapNbt["colors"]
         
         if type(dimension) == nbtlib.tag.Int:
-            dimension = int(mapNbt["dimension"])
-        if type(dimension) == nbtlib.tag.Byte:
-            dimension = int(mapNbt["dimension"])
-        elif type(dimension) == nbtlib.tag.String:
-            dimension = dimDict[str(mapNbt["dimension"])]
+            dimension = dimDict[mapNbt["dimension"]]
+        elif type(dimension) == nbtlib.tag.Byte:
+            dimension = dimDict[mapNbt["dimension"]]
         
 
         try:
@@ -334,7 +330,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                           "Z": Z,
                           "color": color,
                           "name": name,
-                          "dimension": dimDict[dimension]}
+                          "dimension": dimension}
             bannerTuple = BannerTuple(**bannerDict)
             banners.append(bannerTuple)
         
@@ -396,48 +392,13 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
     
     return maps
 
-def makeMapPngBedrock(worldFolder, outputFolder, unlimitedTracking=False):
-    """generate all the png files from leveldb"""
-
-    nbtMapData = []
-    # open leveldb
-    db = leveldb.open(os.path.join(worldFolder, "db"))
-
-    # iterate over all the maps
-    for a in tqdm(leveldb.iterate(db), bar_format="{l_bar}{bar}"):
-        key = bytearray(a[0])
-        if b"map" in key:
-            # get extract an nbt object
-            mapNbtIo = BytesIO(a[1])
-            mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
-            mapNbt = mapNbtFile.root
-            mapId = int(mapNbt["mapId"])
-            epoch = now
-            nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
-
-    return makeMaps(nbtMapData, outputFolder, unlimitedTracking)
-
-
-def makeMapPngJava(mapDatFiles, outputFolder, unlimitedTracking=False):
-    """generate png from map*.dat files"""
-    # filename format for map .dat file  color data
-    
-    nbtMapData = []
-    
-    for mapDatFile in tqdm(mapDatFiles, "map_*.dat -> nbt".ljust(24), bar_format="{l_bar}{bar}"):
-        mapNbtFile = nbtlib.load(mapDatFile)
-        mapNbt = mapNbtFile.root["data"]
-        mapId = int(os.path.basename(mapDatFile).strip("map_").strip(".dat"))
-        epoch = os.path.getmtime(mapDatFile)
-        nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
-
-    return makeMaps(nbtMapData, outputFolder, unlimitedTracking)
 
 def getMapPngs(mapPngFolder):
     mapPngList = [] 
     
+    globString = filenameSeparator.join(["map"] + 6 * ["*"] + ["*.png"])
     # get all the maps
-    mapPngs = glob.glob(os.path.join(mapPngFolder, "map_*_*_*_*_*_*_*.png"))
+    mapPngs = glob.glob(os.path.join(mapPngFolder, globString))
     
     # iterate over all the maps
     for mapPng in mapPngs:
@@ -448,13 +409,12 @@ def getMapPngs(mapPngFolder):
          dimension,
          x,
          z,
-         scale) = filename.strip("map_").strip(".png").split("_")
+         scale) = filename[3 + len(filenameSeparator):-4].split(filenameSeparator)
 
         # change some types
         x = int(x)
         z = int(z)
         scale = int(scale)
-        dimension = int(dimension)
         mapId = int(mapId)
         if not dimension in dimDict:
             logging.info("Skipped map %s with invalid dimension.", mapId)
@@ -471,10 +431,12 @@ def getMapPngs(mapPngFolder):
     
     return mapPngList
 
+
 def mergeToLevel4(mapPngFolder, outputFolder):
     """pastes all maps to render onto a intermediate zoom level 4 map"""
     # what are we calling these crazy things
-    filenameFormat = "merged_map_{dim}_{x}_{z}.png"
+
+    filenameFormat = filenameSeparator.join(["mergedmap", "{dim}", "{x}", "{z}.png"])
     
     # make sure the output exsists
     os.makedirs(outputFolder, exist_ok=True)
@@ -488,10 +450,7 @@ def mergeToLevel4(mapPngFolder, outputFolder):
     
     # iterate over all the maps
     for mapPng in mapPngs:
-        if not mapPng.dimension in dimDict:
-            logging.info("Skipped map %s with invalid dimension.", mapPng.mapId)
-            continue
-        
+        print(mapPng)    
         # convert the center of the map to the top left corner
         mapTopLeft = (mapPng.x - 128 * 2 ** mapPng.scale // 2 + 64,
                       mapPng.z - 128 * 2 ** mapPng.scale // 2 + 64)
@@ -541,12 +500,14 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
     """generates lowest zoom level tiles from combined zoom level 4 maps"""
 
     # get all the level 4 maps 
-    level4MapFilenames = glob.glob(os.path.join(level4MapFolder, "merged_map_*_*_*.png"))
+    globString = filenameSeparator.join(["mergedmap", "*", "*", "*.png"])
+    level4MapFilenames = glob.glob(os.path.join(level4MapFolder, globString))
     # iterate over level4 maps
     for level4MapFilename in tqdm(level4MapFilenames, "level 4 -> zoom 17 tiles", bar_format="{l_bar}{bar}"):
         # get some details
         name = os.path.basename(level4MapFilename)
-        dim, x, z = name.strip("merged_map_").strip(".png").split("_")
+        name = name[9 + len(filenameSeparator):-4]
+        dim, x, z = name.split(filenameSeparator)
         level4x = int(x)
         level4z = int(z)
         tilex = level4x // 2048
@@ -639,7 +600,7 @@ def genMapIdMarkers(maps, outputFolder):
 
         coordinates = [[TL, TR, BL, BR, TL]]
         properties = {"scale": scale,
-                      "dimension": dimDict[dimension],
+                      "dimension": dimension,
                       "maps": maps }
         
         geometry = {"type": "Polygon",
