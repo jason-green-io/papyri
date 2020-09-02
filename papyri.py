@@ -113,9 +113,9 @@ allColors = [multiplyColor(color, multiplier)
 # convert dimension names to/from human readable
 dimDict = {-1: "minecraft:the_nether",
            0: "minecraft:overworld",
-           1: "minecraft:end",
+           1: "minecraft:the_end",
            'minecraft:overworld': 0,
-           'minecraft:end': 1,
+           'minecraft:the_end': 1,
            'minecraft:the_nether': -1}
 
 
