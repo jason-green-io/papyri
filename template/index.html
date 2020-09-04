@@ -117,7 +117,7 @@
         html += "</span>"
         }
         if (html) {
-            map.openPopup(html, e.latlng, {maxHeight:300, maxWidth:300});
+            map.openPopup(html, e.latlng, {maxHeight:320, maxWidth:300, minWidth:300});
         }
     }
     
@@ -203,7 +203,7 @@
         control = L.control.layers(tileLayers, overlays["minecraft:overworld"]);
         control.addTo(map);
         console.log(overlaysHash)
-        //var hash = new L.Hash(map, overlaysHash);
+        var hash = new L.Hash(map, overlaysHash);
 
         map.on('baselayerchange', function (event) {
             console.log(event.name);

@@ -33,12 +33,12 @@ __status__ = "release"
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-filenameSeparator = "__"
+filenameSeparator = "."
 
-mapPngFilenameFormat = filenameSeparator.join(["map", "{mapId}", "{mapHash}", "{epoch}", "{dimension}", "{x}", "{z}", "{scale}.png"])
+mapPngFilenameFormat = filenameSeparator.join(["{mapId}", "{mapHash}", "{epoch}", "{dimension}", "{x}", "{z}", "{scale}.png"])
 
 # now in epoch
-now = time.time()
+now = int(time.time())
 
 # setup the logger
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
@@ -267,7 +267,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
             mapNbtFile = nbtlib.load(mapDatFile)
             mapNbt = mapNbtFile.root["data"]
             mapId = int(os.path.basename(mapDatFile)[4:-4])
-            epoch = os.path.getmtime(mapDatFile)
+            epoch = int(os.path.getmtime(mapDatFile))
             nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
 
     
@@ -377,10 +377,9 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         if (mapId, mapHash) not in currentIdHashes:
             logging.debug("%s changed", mapId)
             mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.NEAREST)
-            
             filename = mapPngFilenameFormat.format(**mapPng._asdict())
 
-            mapImage.save(os.path.join(outputFolder, filename))
+            mapImage.save(os.path.join(outputFolder, filename.replace(":", "@")))
         
         mapData = MapTuple(mapData=mapPng,
                            bannerData=banners,
@@ -396,7 +395,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
 def getMapPngs(mapPngFolder):
     mapPngList = [] 
     
-    globString = filenameSeparator.join(["map"] + 6 * ["*"] + ["*.png"])
+    globString = filenameSeparator.join(6 * ["*"] + ["*.png"])
     # get all the maps
     mapPngs = glob.glob(os.path.join(mapPngFolder, globString))
     
@@ -409,8 +408,9 @@ def getMapPngs(mapPngFolder):
          dimension,
          x,
          z,
-         scale) = filename[3 + len(filenameSeparator):-4].split(filenameSeparator)
-
+         scale,
+         _) = filename.split(filenameSeparator)
+        dimension = dimension.replace("@", ":")
         # change some types
         x = int(x)
         z = int(z)
@@ -419,7 +419,7 @@ def getMapPngs(mapPngFolder):
         if not dimension in dimDict:
             logging.info("Skipped map %s with invalid dimension.", mapId)
             continue
-        epoch = float(epoch)
+        epoch = int(epoch)
 
         mapPngList.append(MapPngTuple(mapId=mapId,
                                       mapHash=mapHash,
@@ -436,7 +436,7 @@ def mergeToLevel4(mapPngFolder, outputFolder):
     """pastes all maps to render onto a intermediate zoom level 4 map"""
     # what are we calling these crazy things
 
-    filenameFormat = filenameSeparator.join(["mergedmap", "{dim}", "{x}", "{z}.png"])
+    filenameFormat = filenameSeparator.join(["{dimension}", "{x}", "{z}.png"])
     
     # make sure the output exsists
     os.makedirs(outputFolder, exist_ok=True)
@@ -485,13 +485,13 @@ def mergeToLevel4(mapPngFolder, outputFolder):
                                 divmod(mapTuple.z - 128 * 2 ** mapTuple.scale // 2 + 64, 2048)[1])
                 mapPngFilename = mapPngFilenameFormat.format(**mapTuple._asdict()) 
                 # paste the image into the level 4 map
-                with Image.open(os.path.join(mapPngFolder, mapPngFilename)) as mapPng:
+                with Image.open(os.path.join(mapPngFolder, mapPngFilename.replace(":", "@"))) as mapPng:
                     level4MapPng.paste(mapPng, mapPngCoords, mapPng)
                 #print(mapTuple)
             # figure out the name of the file, and save it
-            fileName = filenameFormat.format(dim=d, x=c[0], z=c[1]*-1)
+            fileName = filenameFormat.format(dimension=d, x=c[0], z=c[1]*-1)
 
-            filePath = os.path.join(outputFolder, fileName)
+            filePath = os.path.join(outputFolder, fileName.replace(":", "@"))
             level4MapPng.save(filePath)
             level4MapPng.close()
 
@@ -500,14 +500,14 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
     """generates lowest zoom level tiles from combined zoom level 4 maps"""
 
     # get all the level 4 maps 
-    globString = filenameSeparator.join(["mergedmap", "*", "*", "*.png"])
+    globString = filenameSeparator.join(["*", "*", "*.png"])
     level4MapFilenames = glob.glob(os.path.join(level4MapFolder, globString))
     # iterate over level4 maps
     for level4MapFilename in tqdm(level4MapFilenames, "level 4 -> zoom 17 tiles", bar_format="{l_bar}{bar}"):
         # get some details
         name = os.path.basename(level4MapFilename)
-        name = name[9 + len(filenameSeparator):-4]
-        dim, x, z = name.split(filenameSeparator)
+        dim, x, z, _ = name.split(filenameSeparator)
+        dim = dim.replace("@", ":")
         level4x = int(x)
         level4z = int(z)
         tilex = level4x // 2048
@@ -586,7 +586,7 @@ def genMapIdMarkers(maps, outputFolder):
         for amap in dimCenterScale[1]:
             maps.append({"id": amap.mapData.mapId,
                          "scale" : amap.mapData.scale,
-                         "filename": mapPngFilenameFormat.format(**amap.mapData._asdict())})
+                         "filename": mapPngFilenameFormat.format(**amap.mapData._asdict()).replace(":", "@")})
 
         X = x - 64 * 2 ** scale
         Z = z - 64 * 2 ** scale
