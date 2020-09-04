@@ -40,8 +40,6 @@ mapPngFilenameFormat = filenameSeparator.join(["{mapId}", "{mapHash}", "{epoch}"
 # now in epoch
 now = int(time.time())
 
-# setup the logger
-logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 
 # stuff to convert the map color data to RGB values
 multipliers = [180, 220, 255, 135]
@@ -303,17 +301,16 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
             dimension = dimDict[mapNbt["dimension"]]
         elif type(dimension) == nbtlib.tag.Byte:
             dimension = dimDict[mapNbt["dimension"]]
-        
+        else:
+            dimension = dimension.strip('"')
 
         try:
             mapBanners = mapNbt["banners"]
-            # print(banners)
         except KeyError:
             mapBanners = []
 
         banners = []
         for banner in mapBanners:
-            # print(banner)
             X = int(banner["Pos"]["X"])
             Y = int(banner["Pos"]["Y"])
             Z = int(banner["Pos"]["Z"])
@@ -450,7 +447,6 @@ def mergeToLevel4(mapPngFolder, outputFolder):
     
     # iterate over all the maps
     for mapPng in mapPngs:
-        print(mapPng)    
         # convert the center of the map to the top left corner
         mapTopLeft = (mapPng.x - 128 * 2 ** mapPng.scale // 2 + 64,
                       mapPng.z - 128 * 2 ** mapPng.scale // 2 + 64)
@@ -487,7 +483,6 @@ def mergeToLevel4(mapPngFolder, outputFolder):
                 # paste the image into the level 4 map
                 with Image.open(os.path.join(mapPngFolder, mapPngFilename.replace(":", "@"))) as mapPng:
                     level4MapPng.paste(mapPng, mapPngCoords, mapPng)
-                #print(mapTuple)
             # figure out the name of the file, and save it
             fileName = filenameFormat.format(dimension=d, x=c[0], z=c[1]*-1)
 
@@ -530,7 +525,6 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
                                 numx * imageWidth + imageWidth,
                                 numz * imageWidth + imageWidth)
                         filename = os.path.join(foldername, str(levelNumz) + ".png")
-                        #print(filename, cropBox )
                         tilePng = level4MapPng.crop(cropBox)
                         tilePng = tilePng.resize((256, 256), Image.NEAREST)
                         tilePng.save(filename)
@@ -554,8 +548,6 @@ def extrapolateZoom(tileFolder, level):
             topLeft = (previousTile[0] * 256, previousTile[1] * 256)
             previousTilePng = Image.open(previousTile[2])
             tilePng.paste(previousTilePng, topLeft, previousTilePng)
-            #print(previousTile)
-        #print(filename)
         tilePng = tilePng.resize((256,256), Image.NEAREST)
         os.makedirs(foldername, exist_ok=True)
         tilePng.save(os.path.join(foldername, "{}.png".format(newTile[0][2])))
@@ -633,10 +625,19 @@ def main():
     #parser.add_argument('--overlaymca', help="generate the regionfile overlay (Java only)", action="store_true")
     parser.add_argument('--output', help="output path for web stuff", required=True)
     parser.add_argument('--copytemplate', help="copy default index.html and assets (do this if a new release changes the tempalte)", action="store_true")
+    parser.add_argument('--debug', help="show debug logging", action="store_true")
+
 
     # get the args
     args = parser.parse_args()
 
+    # setup the logger
+    if args.debug:
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+
+    logging.basicConfig(format='%(asctime)s %(message)s', level=level)
     # where to the maps go?
     mapsOutput = os.path.join(args.output, "maps")
 
