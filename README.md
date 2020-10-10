@@ -15,6 +15,8 @@ some python stuff you'll need:
 
     pip3 install tqdm nbtlib Pillow
 
+Remember to read [CHANGELOG.md](CHANGELOG.md) for important info on releases.
+
 ## usage
 
 ```

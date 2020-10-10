@@ -7,8 +7,8 @@ and this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [2.0]
-This version changes the nameing convention of the intermediate files created
-in the output folder. Afile called 1to2.sh is included as a guide for renaming
+This version changes the naming convention of the intermediate files created
+in the output folder. A file called `1to2.sh` is included as a guide for renaming
 the files if you'd like to preserve them. Otherwise, I recommend starting with
 a fresh output folder.
 
