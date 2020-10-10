@@ -1,13 +1,15 @@
 <!DOCTYPE html>
+<!-- vim: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab: -->
 <html>
 <head>
-	
+    
     <title>Papyri</title>
 
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	
-	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="shortcut icon" type="image/png" href="./papyri-32x32.png" />
+    <link rel="icon" type="image/png" href="./papyri-32x32.png"/>
 
     <link rel="stylesheet" href="./assets/css/papyri.css"/>
     
@@ -23,13 +25,30 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <script src='https://unpkg.com/@mapbox/leaflet-pip@latest/leaflet-pip.js'></script>
-	
 </head>
 <body>
 
 <div id='map'></div>
 
 <script>
+
+    dimSet = new Set();
+    tileLayers = new Object();
+    tilesUrl = './tiles/{id}/{z}/{x}/{y}.png'
+    overlays = new Object();
+    overlaysHash = new Object();
+    function loadJSON(file, callback) {   
+        var xobj = new XMLHttpRequest();
+        xobj.overrideMimeType("application/json");
+        xobj.open('GET', file, true); // Replace 'my_data' with the path to your file
+        xobj.onreadystatechange = function () {
+            if (xobj.readyState == 4 && xobj.status == "200") {
+            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+            callback(xobj.responseText);
+            }
+        };
+        xobj.send(null);  
+    }
 
 
     factor = 1 / 2 ** 16
@@ -51,47 +70,30 @@
         distance: function(latlng1, latlng2) {
             var dx = latlng2.lng - latlng1.lng,
             dy = latlng2.lat - latlng1.lat;
-
+            
             return Math.sqrt(dx * dx + dy * dy);
         },
+        
         infinite: true
     });
-	
-    tilesUrl = './tiles/{id}/{z}/{x}/{y}.png'
     
-    overworld = L.tileLayer(tilesUrl, {id: "0", maxZoom: 20, maxNativeZoom: 17});
-    end = L.tileLayer(tilesUrl, {id: "1", maxZoom: 20, maxNativeZoom: 17});
-    nether = L.tileLayer(tilesUrl, {id: "-1", maxZoom: 20, maxNativeZoom: 17});
-        
-    baseMaps = {
-        "Overworld": overworld,
-        "Nether": nether,
-        "End": end
-    };
 
     const IDcolors = ["red", "blue", "green", "purple", "orange"];
     const scaleText = ["1:1", "1:2", "1:4", "1:8", "1:16"]
-
-    map = L.map('map', {
-		crs: L.CRS.pr,
-        layers: [overworld],
-        //touchZoom: false
-    });
-        
-
-    L.control.mousePosition().addTo(map);
+    const regionGradient = ["#fb0004","#f70008","#f3000c","#ef0010","#eb0014","#e70018","#e4001b","#e0001f","#dc0023","#d80027","#d4002b","#d0002f","#cc0033","#c80037","#c4003b","#c0003f","#bc0043","#b80047","#b4004b","#b1004e","#ad0052","#a90056","#a5005a","#a1005e","#9d0062","#990066","#95006a","#91006e","#8d0072","#890076","#85007a","#81007e","#7e0081","#7a0085","#760089","#72008d","#6e0091","#6a0095","#660099","#62009d","#5e00a1","#5a00a5","#5600a9","#5200ad","#4e00b1","#4b00b4","#4700b8","#4300bc","#3f00c0","#3b00c4","#3700c8","#3300cc","#2f00d0","#2b00d4","#2700d8","#2300dc","#1f00e0","#1b00e4","#1800e7","#1400eb","#1000ef","#0c00f3","#0800f7","#0400fb"];
 
     clusterGroupConfig =  {
         iconCreateFunction: function(cluster) {
-            return L.divIcon({
-                iconSize: [576, 48],
-                className: 'banner-marker',
-                html: '<img class="banner-image" src="./assets/banner-images/multiple.png"/><span class="banner-name">' + cluster.getChildCount() + '</class>' });
+        return L.divIcon({
+            iconSize: [576, 48],
+            className: 'banner-marker',
+            html: '<img class="banner-image" src="./assets/banner-images/multiple.png"/><span class="banner-name">' + cluster.getChildCount() + '</class>' 
+            });
         }
     }
     
     function handleClick(e) {
-            var html = '<span style=\"font-size:16px;font-family:unifont\">Last ID in the lists is rendered.</br>';
+        var html = '<span style="font-size:16px;font-family:unifont">';
         console.log(e)
         var match = leafletPip.pointInLayer(
         // the clicked point
@@ -102,167 +104,132 @@
         false);
         if (match.length) {
             for (var i = 0; i < match.length; i++) {
-                scale = match[i].feature.properties.scale 
-                html += "<span style=\"color:" + IDcolors[scale] + "\">"
-                     + scaleText[scale] + " scale: "
-                     + " IDs: " + match[i].feature.properties.IDs
-                     + "</span></br>"
-
+                var maps = match[i].feature.properties.maps
+                    scale = match[i].feature.properties.scale 
+                    html += "<span style=\"color:" + IDcolors[scale] + "\">"
+                    html +=  scaleText[scale] + " scale:</br>"
+                for (var j = 0; j < maps.length; j++) {
+                    html += "map ID " + maps[j].id + "</br>"
+                    html += '<img src="./maps/' + maps[j].filename + '" height="256" width="256"/></br>'
+                }
+                html += "</span></br>"
             }
         html += "</span>"
         }
-		if (html) {
-			map.openPopup(html, e.latlng);
-		}
-	}
-
-    overworldBanners = L.markerClusterGroup(clusterGroupConfig);
-    netherBanners = L.markerClusterGroup(clusterGroupConfig);
-    endBanners = L.markerClusterGroup(clusterGroupConfig);
-    
-    overworldRegions = L.geoJSON();
-    netherRegions = L.geoJSON();
-    endRegions = L.geoJSON();
-
-    styleMaps = { style: function (feature) {
-		  				return {color: IDcolors[feature.properties.scale]}
-						}
-    		}
-                
-    styleRegions = { style: function (feature) {
-		  				return {color: IDcolors[feature.properties.scale]}
-						}
-    		}
-
-    overworldMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
-    netherMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
-    endMaps = L.geoJSON(null, styleMaps).on('click', handleClick);
-
-	mapsOverlays = [overworldMaps, netherMaps, endMaps];
-
-    overworldOverlays = {
-        "banners": overworldBanners,
-        "regions": overworldRegions,
-        "ids": overworldMaps
-        };
-
-    netherOverlays = {
-        "banners": netherBanners,
-        "regions": netherRegions,
-        "ids": netherMaps
-        };
-
-    endOverlays = {
-        "banners": endBanners,
-        "regions": endRegions,
-        "ids": endMaps
-        };
-    
-    allOverlays = {
-        "overworld": overworldOverlays,
-        "nether": netherOverlays,
-        "end": endOverlays
-        };
-
-    var allOverlaysForHash = {
-        "O": overworld,
-        "N": nether,
-        "E": end,
-        "OB": overworldBanners,
-        "OR": overworldRegions,
-        "NB": netherBanners,
-        "NR": netherRegions,
-        "EB": endBanners,
-        "ER": endRegions,
-        "OI": overworldMaps,
-        "NI": netherMaps,
-        "EI": endMaps
-    };
-    
-    map.fitBounds([[-1000, -1000], [1000, 1000]]);
-    
-    var hash = new L.Hash(map, allOverlaysForHash);
-    
-    control = L.control.layers(baseMaps, overworldOverlays);
-    control.addTo(map);
-
-    map.on('baselayerchange', function (event) {
-        console.log(event.name);
-        map.closePopup();
-        overworldBanners.remove();
-        netherBanners.remove();
-        endBanners.remove();
-        overworldRegions.remove();
-        netherRegions.remove();
-        endRegions.remove();
-        overworldMaps.remove();
-        netherMaps.remove();
-        endMaps.remove();
-        switch (event.name) {
-            case "Overworld":
-              control.remove()
-              control = L.control.layers(baseMaps, overworldOverlays);
-              control.addTo(map);
-              break;
-            case "Nether":
-              control.remove()
-              control = L.control.layers(baseMaps, netherOverlays);
-              control.addTo(map);
-              break;
-            case "End":
-              control.remove()
-              control = L.control.layers(baseMaps, endOverlays);
-              control.addTo(map);
-              break;
+        if (html) {
+            map.openPopup(html, e.latlng, {maxHeight:320, maxWidth:300, minWidth:300});
         }
-    });
-
-
-    function loadJSON(file, callback) {   
-        var xobj = new XMLHttpRequest();
-        xobj.overrideMimeType("application/json");
-        xobj.open('GET', file, true); // Replace 'my_data' with the path to your file
-        xobj.onreadystatechange = function () {
-            if (xobj.readyState == 4 && xobj.status == "200") {
-            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
-            callback(xobj.responseText);
-            }
-        };
-        xobj.send(null);  
     }
-        
-    loadJSON('banners.json', function(response) {
-        // Parse JSON string into object
-        markers = JSON.parse(response);
-	
-        for ( var i=0; i < markers.length; ++i ) {
-	        L.marker( [markers[i].Z, markers[i].X], {icon: L.divIcon({
-		        iconSize: [576, 48],
-                className: 'banner-marker',
-                html: '<img class="banner-image" src="./assets/banner-images/'
-                + markers[i].color + 'banner.png"/><span class="banner-name">'
-                + markers[i].name + '</class>' })}).addTo( allOverlays[markers[i].dimension]['banners'] );
-	    };
-    });
-        
-    loadJSON('regions.json', function(response) {
-        // Parse JSON string into object
-        markers = JSON.parse(response);
-
-        for ( var i=0; i < markers.length; ++i ) {
-            allOverlays[markers[i].properties.dimension]['regions'].addData(markers[i]);
-        };
-    });
     
-    
-     loadJSON('maps.json', function(response) {
+    styleMaps = { style: function (feature) {
+            return {color: IDcolors[feature.properties.scale]}
+        }
+    }
+                
+    styleCustom = { style: function (feature) {
+            return feature.properties.style
+        }
+    }
+
+    loadJSON('maps.json', function(response) {
         // Parse JSON string into object
         markers = JSON.parse(response);
-
         for ( var i=0; i < markers.length; ++i ) {
-            allOverlays[markers[i].properties.dimension]['ids'].addData(markers[i]);
+            dimSet.add(markers[i].properties.dimension);
         };
-    });
+        
+        for (var it = dimSet.values(), val= null; val=it.next().value;) {
+            tileLayers[val] = L.tileLayer(tilesUrl, {id: val, maxZoom: 20, maxNativeZoom: 17});
+            console.log("tileLayer: "+val);
+            overlays[val] = {"banners": L.markerClusterGroup(clusterGroupConfig),
+                             "custom": L.geoJSON(null, styleCustom),
+                             "maps": L.geoJSON(null, styleMaps).on('click', handleClick)
+                            };
+            overlaysHash[val] = tileLayers[val]
+            overlaysHash[val + "_" + "banners"] = overlays[val]["banners"]
+            overlaysHash[val + "_" + "maps"] = overlays[val]["maps"]
+            overlaysHash[val + "_" + "custom"] = overlays[val]["custom"]
+        }
+        // console.log(tileLayers)
+        // console.log(overlaysHash)
+        // console.log(overlays)
+        
+        loadJSON('banners.json', function(response) {
+            // Parse JSON string into object
+            markers = JSON.parse(response);
+
+            for ( var i=0; i < markers.length; ++i ) {
+            console.log(markers[i])
+                L.marker( [markers[i].Z, markers[i].X], {icon: L.divIcon({
+                    iconSize: [576, 48],
+                    className: 'banner-marker',
+                    html: '<img class="banner-image" src="./assets/banner-images/'
+                    + markers[i].color + 'banner.png"/><span class="banner-name">'
+                    + markers[i].name + '</class>' })}).addTo( overlays[markers[i].dimension]['banners'] );
+        }});
+
+        loadJSON('custom.json', function(response) {
+            // Parse JSON string into object
+            markers = JSON.parse(response);
+
+            for ( var i=0; i < markers.length; ++i ) {
+            console.log(markers[i])
+                overlays[markers[i].properties.dimension]['custom'].addData(markers[i]);
+            };
+        });
+        
+        
+        loadJSON('maps.json', function(response) {
+            // Parse JSON string into object
+            markers = JSON.parse(response);
+
+            for ( var i=0; i < markers.length; ++i ) {
+            console.log(markers[i])
+                overlays[markers[i].properties.dimension]['maps'].addData(markers[i]);
+            };
+        });
+        map = L.map('map', {
+            crs: L.CRS.pr,
+            layers: [tileLayers["minecraft:overworld"]],
+            //touchZoom: false
+        });
+            
+
+        L.control.mousePosition().addTo(map);
+
+        map.fitBounds([[-1000, -1000], [1000, 1000]]);
+       
+        console.log("adding initial layer")
+        control = L.control.layers(tileLayers, overlays["minecraft:overworld"]);
+        control.addTo(map);
+        console.log(overlaysHash)
+        var hash = new L.Hash(map, overlaysHash);
+
+        map.on('baselayerchange', function (event) {
+            console.log(event.name);
+            map.closePopup();
+            Object.entries(overlays).forEach(overlaydim => {
+                console.log(overlaydim[1])
+                Object.entries(overlaydim[1]).forEach(overlay => {
+                
+                    console.log(overlay[1])
+                    overlay[1].remove()
+                })
+            });
+            function remControl(e) {
+                control.remove()
+                console.log(overlays[e.name])
+                control = L.control.layers(tileLayers, overlays[e.name])
+                control.addTo(map)
+            }
+            remControl(event)
+
+        });
+});
+
+
+
+
 </script>
 </body>
 </html>
