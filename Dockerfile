@@ -16,3 +16,4 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 ENV SCHEDULE "0 * * * *"
 ENV WEBSERVER true
+ENV TYPE java

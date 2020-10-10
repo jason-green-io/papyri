@@ -6,7 +6,12 @@ Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0]
+This version changes the nameing convention of the intermediate files created
+in the output folder. Afile called 1to2.sh is included as a guide for renaming
+the files if you'd like to preserve them. Otherwise, I recommend starting with
+a fresh output folder.
+
 ### Added
 - Maps now displayed in popup, this allows old maps and locked maps to have a
   place in papyri. Inspired by the Hermiton Herald.
@@ -20,6 +25,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - using NEAREST filter to keep pixelated Minecraft feel in some cases
   [@AndrewKvalheim](https://github.com/AndrewKvalheim)
 - changed stylesheet to keep map pixelated at low zoom levels [@AndrewKvalheim](https://github.com/AndrewKvalheim)
+- revamped intermediate file naming to support other features
 
 ## [1.0.0] - 2020-01-23
 ### Added
