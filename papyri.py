@@ -26,7 +26,7 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "1.1"
+__version__ = "2.0.1"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
 __status__ = "release"
@@ -238,7 +238,7 @@ def filterLatestMapPngsById(mapPngs):
         idEpochs.append((mapPng.mapId, mapPng.epoch, mapPng))
     
     # sort the whole thing by epoch
-    idEpochs.sort(key=operator.itemgetter(2))
+    idEpochs.sort(key=operator.itemgetter(1))
     
     for idEpoch in idEpochs:
         # this will only keep the latest map ids around for rendering
@@ -264,7 +264,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                 mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
                 mapNbt = mapNbtFile.root
                 mapId = int(mapNbt["mapId"])
-                epoch = now
+                epoch = 0
                 nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
 
     elif serverType == "java":   
@@ -364,10 +364,21 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         else:
             # changed image
             logging.debug("%s is already known", mapId)
-            epoch = currentIds.get(mapId).epoch
-
             if (mapId, mapHash) not in currentIdHashes:
-                epoch = now
+                # map has changed based on the hash
+                
+                logging.debug("%s changed and will get an updated epoch", mapId)
+                epoch = now if not mapEpoch else mapEpoch
+
+            else:
+                logging.debug("%s has not changed and will keep it's epoch", mapId)
+                epoch = currentIds.get(mapId).epoch
+
+            if mapEpoch > currentIds.get(mapId).epoch:
+                logging.debug("%s has a more recent epoch from it's dat file, updating", mapId)
+                epoch = mapEpoch
+            
+
         
        
         mapPng = MapPngTuple(mapId=mapId,
@@ -380,7 +391,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
 
 
         if (mapId, mapHash) not in currentIdHashes:
-            logging.debug("%s changed", mapId)
+            logging.debug("%s data changed", mapId)
             mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.NEAREST)
             filename = mapPngFilenameFormat.format(**mapPng._asdict())
 
@@ -454,7 +465,7 @@ def mergeToLevel4(mapPngFolder, outputFolder):
     latestMapPngs = filterLatestMapPngsByCenter(mapPngs)
     
     # iterate over all the maps
-    for mapPng in mapPngs:
+    for mapPng in latestMapPngs:
         # convert the center of the map to the top left corner
         mapTopLeft = (mapPng.x - 128 * 2 ** mapPng.scale // 2 + 64,
                       mapPng.z - 128 * 2 ** mapPng.scale // 2 + 64)
