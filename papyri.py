@@ -26,7 +26,7 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
 __status__ = "release"
@@ -203,27 +203,27 @@ MapTuple = namedtuple("MapTuple", ["mapData", "bannerData", "frameData"])
 MapPngTuple = namedtuple("MapPngTuple", ["mapId", "mapHash", "epoch", "x", "z", "dimension", "scale"])
 
 
-def filterLatestMapPngsByCenter(mapPngs):
+def mapPngsSortedByEpoch(mapPngs):
     """Returns a list of latest map png files by their center"""
 
     # get all generated maps
     
     centerEpochs = []
-    filterDict = {}
+
 
     for mapPng in mapPngs:
-        centerEpochs.append(("{x}_{z}_{scale}_{dimension}".format(**mapPng._asdict()), mapPng.epoch, mapPng))
+        centerEpochs.append((mapPng.epoch, mapPng))
         
     # sort the whole thing by epoch
-    centerEpochs.sort(key=operator.itemgetter(1))
+    centerEpochs.sort(key=operator.itemgetter(0))
     
-    for centerEpoch in centerEpochs:
-        # this will only keep the latest map ids around for rendering
-        filterDict[centerEpoch[0]] = centerEpoch[2]
+    # for centerEpoch in centerEpochs:
+    #     # this will only keep the latest map ids around for rendering
+    #     [centerEpoch[0]] = centerEpoch[2]
    
-    latestMapPngs = list(filterDict.values())
+    # latestMapPngs = list(filterDict.values())
     
-    return latestMapPngs
+    return [m[1] for m in centerEpochs]
 
 
 def filterLatestMapPngsById(mapPngs):
@@ -282,10 +282,8 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
     maps = []
     os.makedirs(outputFolder, exist_ok=True)
     mapPngs = getMapPngs(outputFolder)
-    currentMapPngs = filterLatestMapPngsById(mapPngs)
     
-    currentIdHashes = {(x.mapId, x.mapHash): x for x in currentMapPngs}
-    currentIds = {x.mapId: x for x in currentMapPngs}
+    currentIds = {x.mapId: x for x in mapPngs}
     
     for nbtMap in tqdm(nbtMapData, "nbt -> png".ljust(24), bar_format="{l_bar}{bar}"):
         mapId = nbtMap["id"]
@@ -356,7 +354,8 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         # empty map
         if mapHash == "fcd6bcb56c1689fcef28b57c22475bad":
             continue
-
+        
+        
         if mapId not in currentIds:
             # brand new image
             logging.debug("%s is a new map", mapId)
@@ -364,19 +363,20 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         else:
             # changed image
             logging.debug("%s is already known", mapId)
-            if (mapId, mapHash) not in currentIdHashes:
+            if mapHash != currentIds.get(mapId).mapHash:
                 # map has changed based on the hash
                 
                 logging.debug("%s changed and will get an updated epoch", mapId)
                 epoch = now if not mapEpoch else mapEpoch
 
+            elif mapEpoch > currentIds.get(mapId).epoch:
+                logging.debug("%s has a more recent epoch from it's dat file, updating", mapId)
+                epoch = mapEpoch
+            
             else:
                 logging.debug("%s has not changed and will keep it's epoch", mapId)
                 epoch = currentIds.get(mapId).epoch
 
-            if mapEpoch > currentIds.get(mapId).epoch:
-                logging.debug("%s has a more recent epoch from it's dat file, updating", mapId)
-                epoch = mapEpoch
             
 
         
@@ -390,12 +390,16 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                              scale=scale)
 
 
-        if (mapId, mapHash) not in currentIdHashes:
-            logging.debug("%s data changed", mapId)
-            mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.NEAREST)
-            filename = mapPngFilenameFormat.format(**mapPng._asdict())
+        mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.NEAREST)
+        filename = mapPngFilenameFormat.format(**mapPng._asdict()).replace(":", "@")
+        oldFilename = mapPngFilenameFormat.format(**currentIds.get(mapId)._asdict()).replace(":", "@")
+        
+        try:
+            os.remove(os.path.join(outputFolder, oldFilename))
+        except:
+            logging.debug("%s isn't there, didn't delete", oldFilename)
 
-            mapImage.save(os.path.join(outputFolder, filename.replace(":", "@")))
+        mapImage.save(os.path.join(outputFolder, filename))
         
         mapData = MapTuple(mapData=mapPng,
                            bannerData=banners,
@@ -462,7 +466,7 @@ def mergeToLevel4(mapPngFolder, outputFolder):
 
     # get all the maps
     mapPngs = getMapPngs(mapPngFolder)
-    latestMapPngs = filterLatestMapPngsByCenter(mapPngs)
+    latestMapPngs = mapPngsSortedByEpoch(mapPngs)
     
     # iterate over all the maps
     for mapPng in latestMapPngs:
