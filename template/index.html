@@ -94,7 +94,6 @@
     
     function handleClick(e) {
         var html = '<span style="font-size:16px;font-family:unifont">';
-        console.log(e)
         var match = leafletPip.pointInLayer(
         // the clicked point
         e.latlng,
@@ -140,7 +139,6 @@
         
         for (var it = dimSet.values(), val= null; val=it.next().value;) {
             tileLayers[val] = L.tileLayer(tilesUrl, {id: val, maxZoom: 20, maxNativeZoom: 17});
-            console.log("tileLayer: "+val);
             overlays[val] = {"banners": L.markerClusterGroup(clusterGroupConfig),
                              "custom": L.geoJSON(null, styleCustom),
                              "maps": L.geoJSON(null, styleMaps).on('click', handleClick)
@@ -150,16 +148,12 @@
             overlaysHash[val + "_" + "maps"] = overlays[val]["maps"]
             overlaysHash[val + "_" + "custom"] = overlays[val]["custom"]
         }
-        // console.log(tileLayers)
-        // console.log(overlaysHash)
-        // console.log(overlays)
         
         loadJSON('banners.json', function(response) {
             // Parse JSON string into object
             markers = JSON.parse(response);
 
             for ( var i=0; i < markers.length; ++i ) {
-            console.log(markers[i])
                 L.marker( [markers[i].Z, markers[i].X], {icon: L.divIcon({
                     iconSize: [576, 48],
                     className: 'banner-marker',
@@ -173,7 +167,6 @@
             markers = JSON.parse(response);
 
             for ( var i=0; i < markers.length; ++i ) {
-            console.log(markers[i])
                 overlays[markers[i].properties.dimension]['custom'].addData(markers[i]);
             };
         });
@@ -184,7 +177,6 @@
             markers = JSON.parse(response);
 
             for ( var i=0; i < markers.length; ++i ) {
-            console.log(markers[i])
                 overlays[markers[i].properties.dimension]['maps'].addData(markers[i]);
             };
         });
@@ -202,23 +194,18 @@
         console.log("adding initial layer")
         control = L.control.layers(tileLayers, overlays["minecraft:overworld"]);
         control.addTo(map);
-        console.log(overlaysHash)
         var hash = new L.Hash(map, overlaysHash);
 
         map.on('baselayerchange', function (event) {
-            console.log(event.name);
             map.closePopup();
             Object.entries(overlays).forEach(overlaydim => {
-                console.log(overlaydim[1])
                 Object.entries(overlaydim[1]).forEach(overlay => {
                 
-                    console.log(overlay[1])
                     overlay[1].remove()
                 })
             });
             function remControl(e) {
                 control.remove()
-                console.log(overlays[e.name])
                 control = L.control.layers(tileLayers, overlays[e.name])
                 control.addTo(map)
             }

@@ -6,6 +6,15 @@ Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [2.0.2] - 2020-12-07
+### Fixed
+- Logic surrounding selecting maps to render
+- Removed extraneous console.log()s in index.html
+
+# [2.0.1]
+### Fixed
+- wrong maps getting rendered
+
 ## [2.0]
 This version changes the naming convention of the intermediate files created
 in the output folder. A file called `1to2.sh` is included as a guide for renaming
