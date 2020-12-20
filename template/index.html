@@ -182,7 +182,7 @@
         });
         map = L.map('map', {
             crs: L.CRS.pr,
-            layers: [tileLayers["minecraft:overworld"]],
+            layers: [tileLayers["minecraft@overworld"]],
             //touchZoom: false
         });
             
@@ -192,7 +192,7 @@
         map.fitBounds([[-1000, -1000], [1000, 1000]]);
        
         console.log("adding initial layer")
-        control = L.control.layers(tileLayers, overlays["minecraft:overworld"]);
+        control = L.control.layers(tileLayers, overlays["minecraft@overworld"]);
         control.addTo(map);
         var hash = new L.Hash(map, overlaysHash);
 

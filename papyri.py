@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import os
 import datetime
 import glob
@@ -26,7 +26,7 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "2.0.2"
+__version__ = "2.0.3"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
 __status__ = "release"
@@ -122,7 +122,10 @@ dimDict = {-1: "minecraft:the_nether",
            1: "minecraft:the_end",
            'minecraft:overworld': 0,
            'minecraft:the_end': 1,
-           'minecraft:the_nether': -1}
+           'minecraft:the_nether': -1,
+           'minecraft@overworld': 0,
+           'minecraft@the_end': 1,
+           'minecraft@the_nether': -1}
 
 
 def findMapFiles(inputFolder):
@@ -309,13 +312,13 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
             dimension = dimDict[mapNbt["dimension"]]
         else:
             dimension = dimension.strip('"')
-
+        dimension = dimension.replace(":", "@")
         try:
             mapBanners = mapNbt["banners"]
         except KeyError:
             mapBanners = []
 
-        banners = []
+        banners = set()
         for banner in mapBanners:
             X = int(banner["Pos"]["X"])
             Y = int(banner["Pos"]["Y"])
@@ -335,7 +338,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                           "name": name,
                           "dimension": dimension}
             bannerTuple = BannerTuple(**bannerDict)
-            banners.append(bannerTuple)
+            banners.add(bannerTuple)
         
         frames = []
         # logging.debug(mapColors)
@@ -391,13 +394,14 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
 
 
         mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.NEAREST)
-        filename = mapPngFilenameFormat.format(**mapPng._asdict()).replace(":", "@")
-        oldFilename = mapPngFilenameFormat.format(**currentIds.get(mapId)._asdict()).replace(":", "@")
+        filename = mapPngFilenameFormat.format(**mapPng._asdict())
+        
         
         try:
+            oldFilename = mapPngFilenameFormat.format(**currentIds.get(mapId)._asdict())
             os.remove(os.path.join(outputFolder, oldFilename))
         except:
-            logging.debug("%s isn't there, didn't delete", oldFilename)
+            logging.debug("%s isn't there, didn't delete", mapId)
 
         mapImage.save(os.path.join(outputFolder, filename))
         
@@ -430,7 +434,6 @@ def getMapPngs(mapPngFolder):
          z,
          scale,
          _) = filename.split(filenameSeparator)
-        dimension = dimension.replace("@", ":")
         # change some types
         x = int(x)
         z = int(z)
@@ -504,12 +507,12 @@ def mergeToLevel4(mapPngFolder, outputFolder):
                                 divmod(mapTuple.z - 128 * 2 ** mapTuple.scale // 2 + 64, 2048)[1])
                 mapPngFilename = mapPngFilenameFormat.format(**mapTuple._asdict()) 
                 # paste the image into the level 4 map
-                with Image.open(os.path.join(mapPngFolder, mapPngFilename.replace(":", "@"))) as mapPng:
+                with Image.open(os.path.join(mapPngFolder, mapPngFilename)) as mapPng:
                     level4MapPng.paste(mapPng, mapPngCoords, mapPng)
             # figure out the name of the file, and save it
             fileName = filenameFormat.format(dimension=d, x=c[0], z=c[1]*-1)
 
-            filePath = os.path.join(outputFolder, fileName.replace(":", "@"))
+            filePath = os.path.join(outputFolder, fileName)
             level4MapPng.save(filePath)
             level4MapPng.close()
 
@@ -525,7 +528,6 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
         # get some details
         name = os.path.basename(level4MapFilename)
         dim, x, z, _ = name.split(filenameSeparator)
-        dim = dim.replace("@", ":")
         level4x = int(x)
         level4z = int(z)
         tilex = level4x // 2048
@@ -601,7 +603,7 @@ def genMapIdMarkers(maps, outputFolder):
         for amap in dimCenterScale[1]:
             maps.append({"id": amap.mapData.mapId,
                          "scale" : amap.mapData.scale,
-                         "filename": mapPngFilenameFormat.format(**amap.mapData._asdict()).replace(":", "@")})
+                         "filename": mapPngFilenameFormat.format(**amap.mapData._asdict())})
 
         X = x - 64 * 2 ** scale
         Z = z - 64 * 2 ** scale
