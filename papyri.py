@@ -26,7 +26,7 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "2.0.3"
+__version__ = "2.0.4"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
 __status__ = "release"
@@ -455,7 +455,7 @@ def getMapPngs(mapPngFolder):
     return mapPngList
 
 
-def mergeToLevel4(mapPngFolder, outputFolder):
+def mergeToLevel4(mapPngFolder, outputFolder, disablezoomsort):
     """pastes all maps to render onto a intermediate zoom level 4 map"""
     # what are we calling these crazy things
 
@@ -494,8 +494,9 @@ def mergeToLevel4(mapPngFolder, outputFolder):
             
             mapTuples = coords[1]
             
+            if not disablezoomsort: 
             # sort them, import for the rendering order
-            mapTuples.sort(key=lambda x: x.scale, reverse=True)
+                mapTuples.sort(key=lambda x: x.scale, reverse=True)
             
             # create the level 4 images
             level4MapPng = Image.new("RGBA", (2048, 2048))
@@ -647,6 +648,7 @@ def main():
     parser.add_argument('--world', help="location of your world folder or save folder", required=True)
     parser.add_argument('--type', help="server type, bedrock or java", choices=["java", "bds"], required=True)
     parser.add_argument('--includeunlimitedtracking', help="include maps that have unlimited tracking on, this includes older maps from previous Minecraft versions and treasure maps in +1.13", action="store_true")
+    parser.add_argument('--disablezoomsort', help="don't sort maps by zoom level before rendering, newer maps of higher zoom level will cover lower level maps", action="store_true")
     #parser.add_argument('--overlaymca', help="generate the regionfile overlay (Java only)", action="store_true")
     parser.add_argument('--output', help="output path for web stuff", required=True)
     parser.add_argument('--copytemplate', help="copy default index.html and assets (do this if a new release changes the tempalte)", action="store_true")
@@ -676,7 +678,7 @@ def main():
     latestMaps = makeMaps(args.world, mapsOutput, serverType=args.type, unlimitedTracking=args.includeunlimitedtracking)
     
     # make the level 4 maps
-    mergeToLevel4(mapsOutput, mergedMapsOutput)
+    mergeToLevel4(mapsOutput, mergedMapsOutput, disablezoomsort=args.disablezoomsort)
 
     # create the tiles for the lowest zoom level
     genZoom17Tiles(mergedMapsOutput, tileOutput)
