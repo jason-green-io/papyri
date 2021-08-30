@@ -6,6 +6,11 @@ Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+# [2.0.5] - 2020-08-29
+### Fixed
+- fix for #37 and 1.17 in general. New colors were added.
+
 # [2.0.4] - 2020-02-09
 ### Added
 - `--disablezoomsort` to skip sorting by zoom level, only by updated time #34
