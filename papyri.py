@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# vim: fenc=utf-8:ts=4:sw=4:sta:et:sts=4:ai
 import os
 import datetime
 import glob
@@ -26,7 +27,7 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "2.0.4"
+__version__ = "2.0.5"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
 __status__ = "release"
@@ -103,7 +104,10 @@ basecolors = [(0, 0, 0, 0),
               (22, 126, 134),
               (58, 142, 140),
               (86, 44, 62),
-              (20, 180, 133)]
+              (20, 180, 133),
+              (100, 100, 100),
+              (216, 175, 147),
+              (127, 167, 150)]
 
 
 
@@ -313,10 +317,16 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         else:
             dimension = dimension.strip('"')
         dimension = dimension.replace(":", "@")
+        
         try:
             mapBanners = mapNbt["banners"]
         except KeyError:
             mapBanners = []
+
+        try:
+            mapFrames = mapNbt["frames"]
+        except KeyError:
+            mapFrames = []
 
         banners = set()
         for banner in mapBanners:
@@ -339,8 +349,18 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                           "dimension": dimension}
             bannerTuple = BannerTuple(**bannerDict)
             banners.add(bannerTuple)
-        
         frames = []
+        for frame in mapFrames:
+            X = int(frame["Pos"]["X"])
+            Y = int(frame["Pos"]["Y"])
+            Z = int(frame["Pos"]["Z"])
+            rotation = int(frame["Rotation"])
+
+            frameDict = {"X": X,
+                        "Y": Y,
+                        "Z": Z,
+                        "rotation": rotation}
+            frames.append(frameDict)
         # logging.debug(mapColors)
         
         if serverType == "bds":
@@ -604,7 +624,9 @@ def genMapIdMarkers(maps, outputFolder):
         for amap in dimCenterScale[1]:
             maps.append({"id": amap.mapData.mapId,
                          "scale" : amap.mapData.scale,
-                         "filename": mapPngFilenameFormat.format(**amap.mapData._asdict())})
+                         "filename": mapPngFilenameFormat.format(**amap.mapData._asdict()),
+                         "banners": list(amap.bannerData),
+                         "frames": amap.frameData})
 
         X = x - 64 * 2 ** scale
         Z = z - 64 * 2 ** scale
