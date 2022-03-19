@@ -7,6 +7,11 @@ and this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+
+# [2.0.6] - 2022-03-19
+### Fixed
+- fix for #39
+
 # [2.0.5] - 2020-08-29
 ### Fixed
 - fix for #37 and 1.17 in general. New colors were added.
