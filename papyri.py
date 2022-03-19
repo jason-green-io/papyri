@@ -27,7 +27,7 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "2.0.5"
+__version__ = "2.0.6"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
 __status__ = "release"
@@ -269,7 +269,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                 # get extract an nbt object
                 mapNbtIo = BytesIO(a[1])
                 mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
-                mapNbt = mapNbtFile.root
+                mapNbt = mapNbtFile
                 mapId = int(mapNbt["mapId"])
                 epoch = 0
                 nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
@@ -278,7 +278,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         mapDatFiles = findMapFiles(worldFolder)
         for mapDatFile in tqdm(mapDatFiles, "map_*.dat -> nbt".ljust(24), bar_format="{l_bar}{bar}"):
             mapNbtFile = nbtlib.load(mapDatFile)
-            mapNbt = mapNbtFile.root["data"]
+            mapNbt = mapNbtFile["data"]
             mapId = int(os.path.basename(mapDatFile)[4:-4])
             epoch = int(os.path.getmtime(mapDatFile))
             nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
