@@ -15,6 +15,8 @@ some python stuff you'll need:
 
     pip3 install tqdm nbtlib Pillow
 
+(nbtlib >=2.0.0 is required)
+
 Remember to read [CHANGELOG.md](CHANGELOG.md) for important info on releases.
 
 ## usage
