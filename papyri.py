@@ -270,7 +270,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                 mapNbtIo = BytesIO(a[1])
                 mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
                 mapNbt = mapNbtFile
-                mapId = int(mapNbtFile["mapId"])
+                mapId = int(mapNbt["mapId"])
                 epoch = 0
                 nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
 
