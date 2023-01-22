@@ -309,11 +309,17 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         
         dimension = mapNbt["dimension"]
         mapColors = mapNbt["colors"]
-        
+        logging.debug("%s has dimension of %s", mapId, dimension)
         if type(dimension) == nbtlib.tag.Int:
-            dimension = dimDict[mapNbt["dimension"]]
+            try:
+                dimension = dimDict[mapNbt["dimension"]]
+            except:
+                dimension = "unknown"
         elif type(dimension) == nbtlib.tag.Byte:
-            dimension = dimDict[mapNbt["dimension"]]
+            try:
+                dimension = dimDict[mapNbt["dimension"]]
+            except:
+                dimension = "unknown"
         else:
             dimension = dimension.strip('"')
         dimension = dimension.replace(":", "@")
@@ -413,7 +419,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                              scale=scale)
 
 
-        mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.NEAREST)
+        mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.Resampling.NEAREST)
         filename = mapPngFilenameFormat.format(**mapPng._asdict())
         
         
@@ -572,7 +578,7 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
                                 numz * imageWidth + imageWidth)
                         filename = os.path.join(foldername, str(levelNumz) + ".png")
                         tilePng = level4MapPng.crop(cropBox)
-                        tilePng = tilePng.resize((256, 256), Image.NEAREST)
+                        tilePng = tilePng.resize((256, 256), Image.Resampling.NEAREST)
                         tilePng.save(filename)
 
 
@@ -594,7 +600,7 @@ def extrapolateZoom(tileFolder, level):
             topLeft = (previousTile[0] * 256, previousTile[1] * 256)
             previousTilePng = Image.open(previousTile[2])
             tilePng.paste(previousTilePng, topLeft, previousTilePng)
-        tilePng = tilePng.resize((256,256), Image.NEAREST)
+        tilePng = tilePng.resize((256,256), Image.Resampling.NEAREST)
         os.makedirs(foldername, exist_ok=True)
         tilePng.save(os.path.join(foldername, "{}.png".format(newTile[0][2])))
 
