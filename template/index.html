@@ -104,14 +104,31 @@
         if (match.length) {
             for (var i = 0; i < match.length; i++) {
                 var maps = match[i].feature.properties.maps
-                    scale = match[i].feature.properties.scale 
-                    html += "<span style=\"color:" + IDcolors[scale] + "\">"
-                    html +=  scaleText[scale] + " scale:</br>"
+                scale = match[i].feature.properties.scale 
+                html += "<span style=\"color:" + IDcolors[scale] + "\">"
+                html +=  scaleText[scale] + " scale:</span></br>"
                 for (var j = 0; j < maps.length; j++) {
                     html += "map ID " + maps[j].id + "</br>"
                     html += '<img src="./maps/' + maps[j].filename + '" height="256" width="256"/></br>'
+                    var banners = maps[j].banners
+                    html += "<table>"
+                    for (var k = 0; k < banners.length; k++) {
+                        html += "<tr>"
+                        html += '<td style="vertical-align: top"><img style="float: left;" src="./assets/banner-images/'
+                        + banners[k][4] + 'banner.png"/></td>' +
+                        '<td>text: "'+ banners[k][3] + '"</br>' +
+                        " XYZ: " + banners[k][0] + " / " + banners[k][1] + " / " + banners[k][2] + "</br></td>"
+                        html += "</tr>"
+                    }
+                    var frames = maps[j].frames
+                    for (var k = 0; k < frames.length; k++) {
+                        html += "<tr>"
+                        html += '<td><img src="./assets/banner-images/marker.png" style="transform: rotate(' + frames[k]["rotation"]+ 'deg);"></td>'
+                        html += "<td>XYZ: " + frames[k]["X"] + " / " + frames[k].Y + " / " + frames[k].Z + "</br></td>"
+                        html += "</tr>"
+                    }
+                    html += "</table></br>"
                 }
-                html += "</span></br>"
             }
         html += "</span>"
         }
@@ -154,8 +171,8 @@
             markers = JSON.parse(response);
 
             for ( var i=0; i < markers.length; ++i ) {
-                L.marker( [markers[i].Z, markers[i].X], {icon: L.divIcon({
-                    iconSize: [576, 48],
+                L.marker( [markers[i].Z, markers[i].X], {title: markers[i].name, icon: L.divIcon({
+                    //iconSize: [576, 48],
                     className: 'banner-marker',
                     html: '<img class="banner-image" src="./assets/banner-images/'
                     + markers[i].color + 'banner.png"/><span class="banner-name">'
@@ -189,8 +206,9 @@
 
         L.control.mousePosition().addTo(map);
 
+
         map.fitBounds([[-1000, -1000], [1000, 1000]]);
-       
+               
         console.log("adding initial layer")
         control = L.control.layers(tileLayers, overlays["minecraft@overworld"]);
         control.addTo(map);

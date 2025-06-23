@@ -1,21 +1,19 @@
-# papyri version 2.0.5
+# papyri version 2.0.6
 
-Papyri is a Minecraft map item web presenter. It will show all maps and banners created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since many maps can be created of the same area, Papyri will prioritize rendering so that maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
+Papyri is a Java Minecraft map item web presenter. It will show all maps and banners created on a server positioned and scaled properly, creating a mosaic of your world as explored with maps. Since many maps can be created of the same area, Papyri will prioritize rendering so that maps with higher detail are rendered on top of maps of lower detail and maps at the same detail are rendered in order from oldest updated to newest updated.
 
 [Example - Barlynaland](https://minecraft.greener.ca/barlynaland/)
 
 ![Papyri](logo.png)
 
-## prerequisites
+## Setup environment
 
-python3 and pip (pip3) (Not tested in python2)
+```
+python3 -m venv venv
+./venv/bin/pip install -r requirements.txt
+source ./venv/bin/activate
+```
 
-
-some python stuff you'll need:
-
-    pip3 install tqdm nbtlib Pillow
-
-(nbtlib >=2.0.0 is required)
 
 Remember to read [CHANGELOG.md](CHANGELOG.md) for important info on releases.
 
@@ -31,7 +29,6 @@ convert minecraft maps to the web
 optional arguments:
   -h, --help            show this help message and exit
   --world WORLD         location of your world folder or save folder
-  --type {java,bds}     server type, bedrock or java
   --includeunlimitedtracking
                         include maps that have unlimited tracking on, this
                         includes older maps from previous Minecraft versions

@@ -1,0 +1,3 @@
+nbtlib
+Pillow
+tqdm

@@ -5,7 +5,6 @@ import datetime
 import glob
 import logging
 import nbtlib
-import bedrock.leveldb as leveldb
 from PIL import ImageFont, Image, ImageDraw
 import math
 import operator
@@ -15,7 +14,7 @@ from tqdm import tqdm
 import argparse
 import gzip
 import json
-import distutils.dir_util
+import shutil
 import re
 from io import BytesIO
 import sys
@@ -27,6 +26,7 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2020, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
+__version__ = "2.0.6"
 __version__ = "2.0.6"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
@@ -256,32 +256,17 @@ def filterLatestMapPngsById(mapPngs):
     return latestMapPngs
 
 
-def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
+def makeMaps(worldFolder, outputFolder, unlimitedTracking=False):
     nbtMapData = []
-    if serverType == "bds":
-        # open leveldb
-        db = leveldb.open(os.path.join(worldFolder, "db"))
-
-        # iterate over all the maps
-        for a in tqdm(leveldb.iterate(db), "leveldb map keys -> nbt".ljust(24), bar_format="{l_bar}{bar}"):
-            key = bytearray(a[0])
-            if b"map" in key:
-                # get extract an nbt object
-                mapNbtIo = BytesIO(a[1])
-                mapNbtFile = nbtlib.File.parse(mapNbtIo, byteorder="little")
-                mapNbt = mapNbtFile
-                mapId = int(mapNbt["mapId"])
-                epoch = 0
-                nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
-
-    elif serverType == "java":   
-        mapDatFiles = findMapFiles(worldFolder)
-        for mapDatFile in tqdm(mapDatFiles, "map_*.dat -> nbt".ljust(24), bar_format="{l_bar}{bar}"):
-            mapNbtFile = nbtlib.load(mapDatFile)
-            mapNbt = mapNbtFile["data"]
-            mapId = int(os.path.basename(mapDatFile)[4:-4])
-            epoch = int(os.path.getmtime(mapDatFile))
-            nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
+    
+ 
+    mapDatFiles = findMapFiles(worldFolder)
+    for mapDatFile in tqdm(mapDatFiles, "map_*.dat -> nbt".ljust(24), bar_format="{l_bar}{bar}"):
+        mapNbtFile = nbtlib.load(mapDatFile)
+        mapNbt = mapNbtFile["data"]
+        mapId = int(os.path.basename(mapDatFile)[4:-4])
+        epoch = int(os.path.getmtime(mapDatFile))
+        nbtMapData.append({"epoch": epoch, "id": mapId, "nbt": mapNbt})
 
     
     
@@ -303,7 +288,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
 
         if mapUnlimitedTracking and not unlimitedTracking:
             continue
-        scale = int(mapNbt["scale"])
+        scale = int(mapNbt.get("scale", 0))
         x = int(mapNbt["xCenter"])
         z = int(mapNbt["zCenter"])
         
@@ -311,9 +296,9 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
         mapColors = mapNbt["colors"]
         
         if type(dimension) == nbtlib.tag.Int:
-            dimension = dimDict[mapNbt["dimension"]]
+            dimension = dimDict[mapNbt.get("dimension", "unknown")]
         elif type(dimension) == nbtlib.tag.Byte:
-            dimension = dimDict[mapNbt["dimension"]]
+            dimension = dimDict[mapNbt.get("dimension", "unknown")]
         else:
             dimension = dimension.strip('"')
         dimension = dimension.replace(":", "@")
@@ -330,13 +315,27 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
 
         banners = set()
         for banner in mapBanners:
-            X = int(banner["Pos"]["X"])
-            Y = int(banner["Pos"]["Y"])
-            Z = int(banner["Pos"]["Z"])
-            color = banner["Color"]
+            try:
+                X = int(banner["pos"][0])
+                Y = int(banner["pos"][1])
+                Z = int(banner["pos"][2])
+                if "color" in banner:
+                    color = banner["color"]
+                else:
+                    color = "white"
+            except:
+                X = int(banner["Pos"]["X"])
+                Y = int(banner["Pos"]["Y"])
+                Z = int(banner["Pos"]["Z"])
+                color = banner["Color"]
             
             try:
-                name = json.loads(banner["Name"])["text"]
+                if "name" in banner:
+                    name = banner["name"].replace('"', '')
+                elif "Name" in banner:
+                    name = json.loads(banner["name"])
+                    if type(name) == dict():
+                        name = name["text"]
 
             except KeyError:
                 name = ""
@@ -351,10 +350,16 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
             banners.add(bannerTuple)
         frames = []
         for frame in mapFrames:
-            X = int(frame["Pos"]["X"])
-            Y = int(frame["Pos"]["Y"])
-            Z = int(frame["Pos"]["Z"])
-            rotation = int(frame["Rotation"])
+            try:
+                X = int(frame["pos"][0])
+                Y = int(frame["pos"][1])
+                Z = int(frame["pos"][2])
+                rotation = int(frame["rotation"])
+            except:
+                X = int(frame["Pos"]["X"])
+                Y = int(frame["Pos"]["Y"])
+                Z = int(frame["Pos"]["Z"])
+                rotation = int(frame["Rotation"])
 
             frameDict = {"X": X,
                         "Y": Y,
@@ -363,14 +368,10 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
             frames.append(frameDict)
         # logging.debug(mapColors)
         
-        if serverType == "bds":
-            mapImage = Image.frombytes("RGBA", (128, 128),
-                                       bytes([x % 256 for x in mapColors]),
-                                       'raw')
-        elif serverType == "java":
-            colorTuples = [allColors[x % 256] for x in mapColors]
-            mapImage = Image.new("RGBA", (128, 128))
-            mapImage.putdata(colorTuples)
+
+        colorTuples = [allColors[x % 256] for x in mapColors]
+        mapImage = Image.new("RGBA", (128, 128))
+        mapImage.putdata(colorTuples)
         
         mapHash = hashlib.md5(mapImage.tobytes()).hexdigest()
         
@@ -413,7 +414,7 @@ def makeMaps(worldFolder, outputFolder, serverType, unlimitedTracking=False):
                              scale=scale)
 
 
-        mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.NEAREST)
+        mapImage = mapImage.resize((128 * 2 ** scale,) * 2, Image.Resampling.NEAREST)
         filename = mapPngFilenameFormat.format(**mapPng._asdict())
         
         
@@ -572,7 +573,7 @@ def genZoom17Tiles(level4MapFolder, outputFolder):
                                 numz * imageWidth + imageWidth)
                         filename = os.path.join(foldername, str(levelNumz) + ".png")
                         tilePng = level4MapPng.crop(cropBox)
-                        tilePng = tilePng.resize((256, 256), Image.NEAREST)
+                        tilePng = tilePng.resize((256, 256), Image.Resampling.NEAREST)
                         tilePng.save(filename)
 
 
@@ -594,7 +595,7 @@ def extrapolateZoom(tileFolder, level):
             topLeft = (previousTile[0] * 256, previousTile[1] * 256)
             previousTilePng = Image.open(previousTile[2])
             tilePng.paste(previousTilePng, topLeft, previousTilePng)
-        tilePng = tilePng.resize((256,256), Image.NEAREST)
+        tilePng = tilePng.resize((256,256), Image.Resampling.NEAREST)
         os.makedirs(foldername, exist_ok=True)
         tilePng.save(os.path.join(foldername, "{}.png".format(newTile[0][2])))
 
@@ -659,8 +660,7 @@ def genMapIdMarkers(maps, outputFolder):
 def copyTemplate(outputFolder, copytemplate):
     if not os.path.isdir(os.path.join(outputFolder, "assets")) or copytemplate:
         logging.info("Copying template to %s", outputFolder)
-        distutils.dir_util.copy_tree(os.path.join(dir_path, "template"), outputFolder)
-
+        shutil.copytree(os.path.join(dir_path, "template"), outputFolder, dirs_exist_ok=True)
     else:
         logging.info("Assets folder found, not copying template")
 
@@ -668,7 +668,6 @@ def copyTemplate(outputFolder, copytemplate):
 def main():
     parser = argparse.ArgumentParser(description='convert minecraft maps to the web')
     parser.add_argument('--world', help="location of your world folder or save folder", required=True)
-    parser.add_argument('--type', help="server type, bedrock or java", choices=["java", "bds"], required=True)
     parser.add_argument('--includeunlimitedtracking', help="include maps that have unlimited tracking on, this includes older maps from previous Minecraft versions and treasure maps in +1.13", action="store_true")
     parser.add_argument('--disablezoomsort', help="don't sort maps by zoom level before rendering, newer maps of higher zoom level will cover lower level maps", action="store_true")
     #parser.add_argument('--overlaymca', help="generate the regionfile overlay (Java only)", action="store_true")
@@ -697,7 +696,7 @@ def main():
     mergedMapsOutput = os.path.join(args.output, "merged-maps")
     
     # figure out if the input folder is java or bedrock
-    latestMaps = makeMaps(args.world, mapsOutput, serverType=args.type, unlimitedTracking=args.includeunlimitedtracking)
+    latestMaps = makeMaps(args.world, mapsOutput, unlimitedTracking=args.includeunlimitedtracking)
     
     # make the level 4 maps
     mergeToLevel4(mapsOutput, mergedMapsOutput, disablezoomsort=args.disablezoomsort)
