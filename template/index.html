@@ -25,6 +25,16 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <script src='https://unpkg.com/@mapbox/leaflet-pip@latest/leaflet-pip.js'></script>
+
+    <!-- Leaflet Control Search Plugin -->
+    <link rel="stylesheet" href="./assets/css//leaflet-search.min.css"/>
+    <script src="./assets/js/leaflet-search.min.js"></script>
+
+    <style>
+        .leaflet-control-search input {
+            font-size: 1rem;
+        }
+    </style>
 </head>
 <body>
 
@@ -37,6 +47,8 @@
     tilesUrl = './tiles/{id}/{z}/{x}/{y}.png'
     overlays = new Object();
     overlaysHash = new Object();
+    allBanners = [];
+    
     function loadJSON(file, callback) {   
         var xobj = new XMLHttpRequest();
         xobj.overrideMimeType("application/json");
@@ -169,15 +181,35 @@
         loadJSON('banners.json', function(response) {
             // Parse JSON string into object
             markers = JSON.parse(response);
+            allBanners = markers;
 
             for ( var i=0; i < markers.length; ++i ) {
-                L.marker( [markers[i].Z, markers[i].X], {title: markers[i].name, icon: L.divIcon({
-                    //iconSize: [576, 48],
-                    className: 'banner-marker',
-                    html: '<img class="banner-image" src="./assets/banner-images/'
-                    + markers[i].color + 'banner.png"/><span class="banner-name">'
-                    + markers[i].name + '</class>' })}).addTo( overlays[markers[i].dimension]['banners'] );
-        }});
+                var geoJsonFeature = {
+                    type: "Feature",
+                    geometry: {
+                        type: "Point",
+                        coordinates: [markers[i].X, markers[i].Z]
+                    },
+                    properties: {
+                        title: markers[i].name,
+                        name: markers[i].name,
+                        color: markers[i].color,
+                        dimension: markers[i].dimension
+                    }
+                };
+                
+                var marker = L.marker([markers[i].Z, markers[i].X], {
+                    title: markers[i].name, 
+                    icon: L.divIcon({
+                        className: 'banner-marker',
+                        html: '<img class="banner-image" src="./assets/banner-images/' + markers[i].color + 'banner.png"/><span class="banner-name">' + markers[i].name + '</span>'
+                    })
+                });
+                
+                marker.feature = geoJsonFeature;
+                marker.addTo(overlays[markers[i].dimension]['banners']);
+            }
+        });
 
         loadJSON('custom.json', function(response) {
             // Parse JSON string into object
@@ -206,6 +238,34 @@
 
         L.control.mousePosition().addTo(map);
 
+        // Home button control
+        var homeButton = L.Control.extend({
+            options: {
+                position: 'topleft'
+            },
+            onAdd: function(map) {
+                var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+                var button = L.DomUtil.create('a', '', container);
+                button.href = '#';
+                button.title = 'Zoom to all markers';
+                button.innerHTML = '🏠';
+                button.style.width = '30px';
+                button.style.height = '30px';
+                button.style.lineHeight = '30px';
+                button.style.textAlign = 'center';
+                button.style.fontSize = '16px';
+                
+                L.DomEvent.on(button, 'click', function(e) {
+                    L.DomEvent.preventDefault(e);
+                    var group = new L.featureGroup([overlays[currentDimension]["banners"]]);
+                    map.fitBounds(group.getBounds().pad(0.1));
+                });
+                
+                return container;
+            }
+        });
+        
+        map.addControl(new homeButton());
 
         map.fitBounds([[-1000, -1000], [1000, 1000]]);
                
@@ -214,8 +274,42 @@
         control.addTo(map);
         var hash = new L.Hash(map, overlaysHash);
 
+        var currentDimension = "minecraft@overworld";
+        
+        // Add Leaflet Control Search
+        var searchControl = new L.Control.Search({
+            position: 'topleft',
+            layer: overlays[currentDimension]["banners"],
+            initial: false,
+            zoom: 18,
+            marker: false,
+            propertyName: 'title',
+            autoCollapse: true,
+            autoType: false,
+            minLength: 1
+        });
+        
+        map.addControl(searchControl);
+
         map.on('baselayerchange', function (event) {
             map.closePopup();
+            currentDimension = event.name;
+            map.removeControl(searchControl);
+            
+            // Create new search control with current dimension layer
+            searchControl = new L.Control.Search({
+                position: 'topleft',
+                layer: overlays[currentDimension]["banners"],
+                initial: false,
+                zoom: 18,
+                marker: false,
+                propertyName: 'title',
+                autoCollapse: true,
+                autoType: false,
+                minLength: 1
+            });
+            map.addControl(searchControl);
+            
             Object.entries(overlays).forEach(overlaydim => {
                 Object.entries(overlaydim[1]).forEach(overlay => {
                 

@@ -6,14 +6,18 @@ Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+# [2.1] - 2025-11-23
+### Added
+- search on web GUI
+- home button on web GUI
+
 # [2.0.6] - 2024-06-22
 ### Fixed
 - fix for #46
 - no longer supports bedrock
 - fixes for other changes to map data over the years
 - shimmed in #45 and #43, thank you @rm20killer and @LannyRipple
-
-
 
 # [2.0.6] - 2022-03-19
 ### Fixed

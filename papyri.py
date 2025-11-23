@@ -23,11 +23,10 @@ import time
 import struct
 
 __author__ = "Jason Green"
-__copyright__ = "Copyright 2020, Tesseract Designs"
+__copyright__ = "Copyright 2025, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "2.0.6"
-__version__ = "2.0.6"
+__version__ = "2.1"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
 __status__ = "release"
