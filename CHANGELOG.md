@@ -8,6 +8,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 
 # [2.1] - 2025-11-23
+This version includes changes to the tempalte files, run `papyri` with `--copytemplate` at least once.
 ### Added
 - search on web GUI
 - home button on web GUI
