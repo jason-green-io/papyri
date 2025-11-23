@@ -7,7 +7,7 @@ RUN apt-get update \
     rsyslog \
   && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir tqdm nbtlib Pillow numpy
+RUN pip3 install --no-cache-dir tqdm nbtlib Pillow
 
 COPY . /papyri
 
@@ -16,4 +16,3 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 ENV SCHEDULE "0 * * * *"
 ENV WEBSERVER true
-ENV TYPE java

@@ -10,7 +10,7 @@ printenv | sed 's/^\(.*\)$/export \1/g' > /root/project_env.sh
 crontab << EOM
 SHELL=/bin/bash
 BASH_ENV=/root/project_env.sh
-$SCHEDULE python /papyri/papyri.py --type $TYPE --world /data/world --output /output > /proc/1/fd/1 2>&1
+$SCHEDULE python /papyri/papyri.py --world /data/world --output /output > /proc/1/fd/1 2>&1
 
 EOM
 
