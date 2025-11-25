@@ -333,7 +333,7 @@ def makeMaps(worldFolder, outputFolder, unlimitedTracking=False):
                     name = banner["name"].replace('"', '')
                 elif "Name" in banner:
                     name = json.loads(banner["Name"])
-                    if type(name) == dict():
+                    if type(name) == dict:
                         name = name["text"]
 
             except KeyError:
