@@ -26,7 +26,7 @@ __author__ = "Jason Green"
 __copyright__ = "Copyright 2025, Tesseract Designs"
 __credits__ = ["Jason Green"]
 __license__ = "MIT"
-__version__ = "2.1"
+__version__ = "2.1.1"
 __maintainer__ = "Jason Green"
 __email__ = "jason@green.io"
 __status__ = "release"
@@ -332,7 +332,7 @@ def makeMaps(worldFolder, outputFolder, unlimitedTracking=False):
                 if "name" in banner:
                     name = banner["name"].replace('"', '')
                 elif "Name" in banner:
-                    name = json.loads(banner["name"])
+                    name = json.loads(banner["Name"])
                     if type(name) == dict():
                         name = name["text"]
 
