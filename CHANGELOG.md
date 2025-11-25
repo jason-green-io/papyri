@@ -15,6 +15,7 @@ This version includes changes to the tempalte files, run `papyri` with `--copyte
 ### Added
 - search on web GUI
 - home button on web GUI
+- banner overlay enabled by default
 
 # [2.0.6] - 2024-06-22
 ### Fixed
